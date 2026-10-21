@@ -1,0 +1,51 @@
+<resources>
+    <string name="app_name">נץ החמה</string>
+    <string name="title_countdown">ספירה לאחור לנץ</string>
+    <string name="subtitle_vatikin">תפילת ותיקין - כוותיקין</string>
+    <string name="tab_countdown">ספירה לאחור</string>
+    <string name="tab_zmanim">זמני היום</string>
+    <string name="tab_vatikin_guide">סדר תפילת ותיקין</string>
+    <string name="tab_settings">הגדרות ומיקום</string>
+
+    <string name="netzhachama_plain">נץ מישורי (אסטרונומי)</string>
+    <string name="netzhachama_visible">נץ נראה (טופוגרפי)</string>
+    <string name="elevation_label">גובה מעל פני הים</string>
+    <string name="time_until_netz">הזמן שנותר לנץ החמה</string>
+    <string name="netz_occurred">הנץ כבר עבר הבוקר</string>
+    <string name="countdown_to_tomorrow">ספירה לנץ מחר</string>
+
+    <string name="status_passed">נץ החמה עבר</string>
+    <string name="status_approaching">מתקרב לנץ החמה</string>
+    <string name="status_now">נץ החמה כעת!</string>
+
+    <string name="shacharit_start_recommendation">המלצה לתחילת ברוך שאמר: כ-30 דקות לפני הנץ</string>
+    <string name="shema_recommendation">סיום קריאת שמע עם הנץ ומיד עמידה לתפילת שמונה עשרה</string>
+
+    <string name="city_jerusalem">ירושלים</string>
+    <string name="city_bnei_brak">בני ברק</string>
+    <string name="city_tel_aviv">תל אביב - יפו</string>
+    <string name="city_haifa">חיפה</string>
+    <string name="city_tzfat">צפת</string>
+    <string name="city_beer_sheva">באר שבע</string>
+    <string name="city_ashdod">אשדוד</string>
+    <string name="city_netanya">נתניה</string>
+    <string name="city_petah_tikva">פתח תקווה</string>
+    <string name="city_beit_shemesh">בית שמש</string>
+    <string name="city_modiin">מודיעין</string>
+    <string name="city_tiberias">טבריה</string>
+    <string name="city_eilat">אילת</string>
+    <string name="city_new_york">ניו יורק (ברוקלין)</string>
+    <string name="city_lakewood">לייקווד</string>
+    <string name="city_london">לונדון</string>
+
+    <string name="detect_location">זהה מיקום נוכחי (GPS)</string>
+    <string name="custom_location">מיקום מותאם אישית</string>
+    <string name="latitude_label">קו רוחב (Latitude)</string>
+    <string name="longitude_label">קו אורך (Longitude)</string>
+    <string name="elevation_meters">מטרים</string>
+
+    <string name="vibration_alert">רטט בהתקרבות לנץ</string>
+    <string name="sound_alert">צליל/פעמון ברגע הנץ</string>
+    <string name="ten_sec_beeps">צפצוף ב-10 שניות האחרונות</string>
+    <string name="visible_netz_offset">היסט לנץ נראה (דקות)</string>
+</resources>
