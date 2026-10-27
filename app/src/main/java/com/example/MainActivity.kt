@@ -1,6 +1,7 @@
 package com.example
 
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -8,10 +9,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.HourglassTop
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Schedule
@@ -23,11 +26,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.CountdownViewModel
 import com.example.ui.screens.CountdownScreen
+import com.example.ui.screens.JerusalemCompassScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.screens.VatikinGuideScreen
 import com.example.ui.screens.ZmanimScreen
@@ -39,9 +45,10 @@ enum class AppTab(
     val unselectedIcon: ImageVector,
     val tag: String
 ) {
-    COUNTDOWN("ספירה לאחור", Icons.Filled.HourglassTop, Icons.Outlined.HourglassTop, "tab_countdown"),
-    ZMANIM("זמני היום", Icons.Filled.Schedule, Icons.Outlined.Schedule, "tab_zmanim"),
-    GUIDE("מדריך ותיקין", Icons.Filled.MenuBook, Icons.Outlined.MenuBook, "tab_guide"),
+    COUNTDOWN("ספירה", Icons.Filled.HourglassTop, Icons.Outlined.HourglassTop, "tab_countdown"),
+    ZMANIM("זמנים", Icons.Filled.Schedule, Icons.Outlined.Schedule, "tab_zmanim"),
+    GUIDE("ותיקין", Icons.Filled.MenuBook, Icons.Outlined.MenuBook, "tab_guide"),
+    COMPASS("מצפן", Icons.Filled.Explore, Icons.Outlined.Explore, "tab_compass"),
     SETTINGS("הגדרות", Icons.Filled.Settings, Icons.Outlined.Settings, "tab_settings")
 }
 
@@ -49,34 +56,44 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: CountdownViewModel by viewModels()
 
+    // Active tab state accessible to key events
+    private var activeTabState: MutableState<AppTab>? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         setContent {
-            NetzHaChamaTheme(darkTheme = true) {
-                // Ensure natural RTL layout for Hebrew UI
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    val state by viewModel.uiState.collectAsStateWithLifecycle()
-                    val context = LocalContext.current
-                    var currentTab by remember { mutableStateOf(AppTab.COUNTDOWN) }
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            val ticker by viewModel.tickerState.collectAsStateWithLifecycle()
+            val compassState by viewModel.compassState.collectAsStateWithLifecycle()
 
-                    // Handle back press to navigate back to the main countdown screen
+            NetzHaChamaTheme(themeMode = state.themeMode) {
+                // Natural RTL layout for Hebrew UI
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    val context = LocalContext.current
+                    val currentTabState = remember { mutableStateOf(AppTab.COUNTDOWN) }
+                    activeTabState = currentTabState
+                    var currentTab by currentTabState
+
+                    // Handle back press to return to main countdown screen
                     BackHandler(enabled = currentTab != AppTab.COUNTDOWN) {
                         currentTab = AppTab.COUNTDOWN
                     }
 
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
-                        containerColor = DawnDeepNight,
+                        containerColor = MaterialTheme.colorScheme.background,
                         contentWindowInsets = WindowInsets.safeDrawing,
                         bottomBar = {
                             NavigationBar(
-                                containerColor = DawnSurface,
-                                contentColor = TextWhite,
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.onSurface,
                                 tonalElevation = 8.dp,
                                 windowInsets = WindowInsets.navigationBars,
-                                modifier = Modifier.testTag("bottom_nav_bar")
+                                modifier = Modifier
+                                    .height(76.dp)
+                                    .testTag("bottom_nav_bar")
                             ) {
                                 AppTab.values().forEach { tab ->
                                     val isSelected = currentTab == tab
@@ -87,19 +104,25 @@ class MainActivity : ComponentActivity() {
                                             Icon(
                                                 imageVector = if (isSelected) tab.selectedIcon else tab.unselectedIcon,
                                                 contentDescription = tab.title,
-                                                tint = if (isSelected) DawnDeepNight else TextMuted
+                                                tint = if (isSelected) SunriseGold else TextMuted,
+                                                modifier = Modifier.size(26.dp)
                                             )
                                         },
                                         label = {
                                             Text(
                                                 text = tab.title,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = if (isSelected) SunriseLightGold else TextMuted
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontSize = 12.5.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                                ),
+                                                color = if (isSelected) SunriseLightGold else TextMuted,
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                maxLines = 1
                                             )
                                         },
                                         colors = NavigationBarItemDefaults.colors(
-                                            indicatorColor = SunriseGold,
-                                            selectedIconColor = DawnDeepNight,
+                                            indicatorColor = SunriseGold.copy(alpha = 0.22f),
+                                            selectedIconColor = SunriseGold,
                                             selectedTextColor = SunriseLightGold,
                                             unselectedIconColor = TextMuted,
                                             unselectedTextColor = TextMuted
@@ -119,10 +142,13 @@ class MainActivity : ComponentActivity() {
                                 AppTab.COUNTDOWN -> {
                                     CountdownScreen(
                                         state = state,
+                                        ticker = ticker,
                                         onTogglePlainNetz = { viewModel.setPlainNetz(it) },
                                         onToggleSound = { viewModel.toggleSound() },
+                                        onToggleTheme = { viewModel.toggleThemeMode() },
                                         onOpenCitySelector = { currentTab = AppTab.SETTINGS },
-                                        onNavigateToGuide = { currentTab = AppTab.GUIDE }
+                                        onNavigateToGuide = { currentTab = AppTab.GUIDE },
+                                        onNavigateToCompass = { currentTab = AppTab.COMPASS }
                                     )
                                 }
                                 AppTab.ZMANIM -> {
@@ -136,12 +162,21 @@ class MainActivity : ComponentActivity() {
                                         state = state
                                     )
                                 }
+                                AppTab.COMPASS -> {
+                                    JerusalemCompassScreen(
+                                        state = state,
+                                        compassState = compassState,
+                                        onStartListening = { viewModel.compassManager.startListening() },
+                                        onStopListening = { viewModel.compassManager.stopListening() }
+                                    )
+                                }
                                 AppTab.SETTINGS -> {
                                     SettingsScreen(
                                         state = state,
                                         onSelectLocation = { viewModel.selectLocation(it) },
                                         onDetectLocation = { viewModel.detectCurrentLocation(context) },
                                         onSetPlainNetz = { viewModel.setPlainNetz(it) },
+                                        onSetThemeMode = { viewModel.setThemeMode(it) },
                                         onToggleSound = { viewModel.toggleSound() },
                                         onToggleVibration = { viewModel.toggleVibration() },
                                         onToggleTenSecBeep = { viewModel.toggleTenSecBeep() },
@@ -156,5 +191,67 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * Physical Keypad & Kosher Phone navigation support:
+     * - '*' or '#' to cycle tabs
+     * - '1' to '5' for direct tab access
+     * - '7' to toggle Day/Night theme
+     * - '8' to toggle Netz type
+     * - '0' to toggle Sound
+     */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        val tabState = activeTabState
+        if (tabState != null) {
+            val tabs = AppTab.values()
+            val currentIndex = tabState.value.ordinal
+
+            when (keyCode) {
+                KeyEvent.KEYCODE_STAR -> {
+                    val prevIndex = (currentIndex - 1 + tabs.size) % tabs.size
+                    tabState.value = tabs[prevIndex]
+                    return true
+                }
+                KeyEvent.KEYCODE_POUND -> {
+                    val nextIndex = (currentIndex + 1) % tabs.size
+                    tabState.value = tabs[nextIndex]
+                    return true
+                }
+                KeyEvent.KEYCODE_1, KeyEvent.KEYCODE_NUMPAD_1 -> {
+                    tabState.value = AppTab.COUNTDOWN
+                    return true
+                }
+                KeyEvent.KEYCODE_2, KeyEvent.KEYCODE_NUMPAD_2 -> {
+                    tabState.value = AppTab.ZMANIM
+                    return true
+                }
+                KeyEvent.KEYCODE_3, KeyEvent.KEYCODE_NUMPAD_3 -> {
+                    tabState.value = AppTab.GUIDE
+                    return true
+                }
+                KeyEvent.KEYCODE_4, KeyEvent.KEYCODE_NUMPAD_4 -> {
+                    tabState.value = AppTab.COMPASS
+                    return true
+                }
+                KeyEvent.KEYCODE_5, KeyEvent.KEYCODE_NUMPAD_5 -> {
+                    tabState.value = AppTab.SETTINGS
+                    return true
+                }
+                KeyEvent.KEYCODE_7, KeyEvent.KEYCODE_NUMPAD_7 -> {
+                    viewModel.toggleThemeMode()
+                    return true
+                }
+                KeyEvent.KEYCODE_8, KeyEvent.KEYCODE_NUMPAD_8 -> {
+                    viewModel.setPlainNetz(!viewModel.uiState.value.isPlainNetz)
+                    return true
+                }
+                KeyEvent.KEYCODE_0, KeyEvent.KEYCODE_NUMPAD_0 -> {
+                    viewModel.toggleSound()
+                    return true
+                }
+            }
+        }
+        return super.onKeyDown(keyCode, event)
     }
 }

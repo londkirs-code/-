@@ -1,19 +1,20 @@
 package com.example.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.WbSunny
@@ -23,14 +24,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.model.AppThemeMode
 import com.example.ui.CountdownUiState
+import com.example.ui.TickerState
 import com.example.ui.components.DigitalCountdownClock
 import com.example.ui.components.SunArcView
 import com.example.ui.theme.*
@@ -39,210 +42,415 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun CountdownScreen(
     state: CountdownUiState,
+    ticker: TickerState,
     onTogglePlainNetz: (Boolean) -> Unit,
     onToggleSound: () -> Unit,
+    onToggleTheme: () -> Unit,
     onOpenCitySelector: () -> Unit,
     onNavigateToGuide: () -> Unit,
+    onNavigateToCompass: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
-    val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm:ss") }
     val shortTimeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
-
-    val isUrgent = state.remainingMillis in 1..59_999
-    val isFinalTen = state.remainingMillis in 1..10_999
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .padding(bottom = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Top Action & Status Bar
+        // ==========================================
+        // 1. שורת בקרה עליונה: בחירת עיר + כפתור יום/לילה + כפתור צליל (גובה 54dp שווה)
+        // ==========================================
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // City selector button
+            // כפתור בחירת עיר ומיקום (ממורכז, עם קיצור עודף)
             Surface(
                 onClick = onOpenCitySelector,
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = DawnSurfaceCard,
-                border = androidx.compose.foundation.BorderStroke(1.dp, SunriseGold.copy(alpha = 0.3f)),
-                modifier = Modifier.testTag("location_selector_btn")
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, SunriseGold.copy(alpha = 0.5f)),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(54.dp)
+                    .focusable()
+                    .testTag("location_selector_btn")
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Default.LocationOn,
                         contentDescription = "מיקום",
                         tint = SunriseGold,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = state.selectedLocation.nameHebrew,
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        color = TextWhite
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        ),
+                        color = TextWhite,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
 
-            // Right side controls: Netz Type toggle & Sound
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Netz Type Switch Pill
-                Surface(
-                    onClick = { onTogglePlainNetz(!state.isPlainNetz) },
-                    shape = RoundedCornerShape(16.dp),
-                    color = if (state.isPlainNetz) DawnSurfaceVariant else SunriseGold.copy(alpha = 0.2f),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (state.isPlainNetz) DawnBorder else SunriseGold.copy(alpha = 0.6f)
-                    ),
-                    modifier = Modifier.testTag("toggle_netz_type_btn")
-                ) {
-                    Text(
-                        text = if (state.isPlainNetz) "נץ מישורי" else "נץ נראה",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = if (state.isPlainNetz) TextMuted else SunriseSunGlow,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+            // כפתור מצב יום / לילה (54x54dp, ממורכז)
+            Surface(
+                onClick = onToggleTheme,
+                shape = RoundedCornerShape(16.dp),
+                color = DawnSurfaceCard,
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, DawnBorder),
+                modifier = Modifier
+                    .size(54.dp)
+                    .focusable()
+                    .testTag("theme_toggle_btn")
+            ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = if (state.themeMode == AppThemeMode.LIGHT) Icons.Default.LightMode else Icons.Default.DarkMode,
+                        contentDescription = "החלף מצב יום/לילה",
+                        tint = SunriseGold,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
+            }
 
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Sound toggle button
-                IconButton(
-                    onClick = onToggleSound,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(DawnSurfaceCard)
-                        .border(1.dp, DawnBorder, CircleShape)
-                        .testTag("sound_toggle_btn")
-                ) {
+            // כפתור צליל והשתקה (54x54dp, ממורכז)
+            Surface(
+                onClick = onToggleSound,
+                shape = RoundedCornerShape(16.dp),
+                color = DawnSurfaceCard,
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, DawnBorder),
+                modifier = Modifier
+                    .size(54.dp)
+                    .focusable()
+                    .testTag("sound_toggle_btn")
+            ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = if (state.soundEnabled) Icons.Default.Notifications else Icons.Default.NotificationsOff,
                         contentDescription = if (state.soundEnabled) "צלילים מופעלים" else "צלילים מושתקים",
                         tint = if (state.soundEnabled) SunriseGold else TextMuted,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
         }
 
-        // Hebrew Date Display
+        // ==========================================
+        // 2. מתג סוג נץ: נץ נראה מול נץ מישורי (גובה 56dp, שני מקטעים שווים, שתי שורות ממורכזות ללא חיתוך כלל!)
+        // ==========================================
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = DawnSurfaceCard,
+            border = androidx.compose.foundation.BorderStroke(1.5.dp, DawnBorder),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // מקטע 1: נץ נראה
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (!state.isPlainNetz) SunriseGold.copy(alpha = 0.25f) else Color.Transparent)
+                        .border(
+                            1.5.dp,
+                            if (!state.isPlainNetz) SunriseGold else Color.Transparent,
+                            RoundedCornerShape(14.dp)
+                        )
+                        .clickable { onTogglePlainNetz(false) }
+                        .focusable(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "נץ נראה",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.5.sp
+                            ),
+                            color = if (!state.isPlainNetz) SunriseSunGlow else TextMuted,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = "טופוגרפי",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Normal
+                            ),
+                            color = if (!state.isPlainNetz) SunriseGold else TextMuted.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center,
+                            maxLines = 1
+                        )
+                    }
+                }
+
+                // מקטע 2: נץ מישורי
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (state.isPlainNetz) SunriseGold.copy(alpha = 0.25f) else Color.Transparent)
+                        .border(
+                            1.5.dp,
+                            if (state.isPlainNetz) SunriseGold else Color.Transparent,
+                            RoundedCornerShape(14.dp)
+                        )
+                        .clickable { onTogglePlainNetz(true) }
+                        .focusable(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "נץ מישורי",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.5.sp
+                            ),
+                            color = if (state.isPlainNetz) SunriseSunGlow else TextMuted,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = "אסטרונומי",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Normal
+                            ),
+                            color = if (state.isPlainNetz) SunriseGold else TextMuted.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 3. תאריך עברי מלא (ברוחב מלא, לעולם לא נחתך, 100% ממורכז)
+        // ==========================================
         state.currentHebrewDate?.let { hDate ->
             Surface(
-                color = SunriseGold.copy(alpha = 0.08f),
+                color = SunriseGold.copy(alpha = 0.10f),
                 shape = RoundedCornerShape(14.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, SunriseGold.copy(alpha = 0.15f)),
+                border = androidx.compose.foundation.BorderStroke(1.2.dp, SunriseGold.copy(alpha = 0.3f)),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .height(46.dp)
             ) {
-                Text(
-                    text = hDate.formatHebrew(includeDayOfWeek = true, dayOfWeek = state.currentTime.dayOfWeek),
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 0.3.sp
-                    ),
-                    color = TextGold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = hDate.formatHebrew(includeDayOfWeek = true, dayOfWeek = java.time.LocalDate.now().dayOfWeek),
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        ),
+                        color = TextGold,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+
+        // ==========================================
+        // 4. הדמיית קו האופק וגובה השמש
+        // ==========================================
+        Surface(
+            color = DawnSurfaceCard,
+            shape = RoundedCornerShape(18.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, DawnBorder),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                SunArcView(
+                    sunAltitudeDegrees = state.sunAltitudeDegrees,
+                    isNetzReached = ticker.remainingMillis == 0L,
+                    modifier = Modifier.padding(horizontal = 8.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Sun Arc Horizon Visualization
-        SunArcView(
-            sunAltitudeDegrees = state.sunAltitudeDegrees,
-            isNetzReached = state.remainingMillis == 0L,
-            modifier = Modifier.padding(horizontal = 12.dp)
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Countdown Header / Status Title
-        val titleText = if (state.isTomorrowNetz) {
-            "ספירה לאחור לנץ מחר"
-        } else {
-            "הזמן שנותר לנץ החמה"
-        }
-        val targetTimeString = state.targetNetz.format(timeFormatter)
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = 16.dp)
+        // ==========================================
+        // 5. כותרת סטטוס ושעון הספירה הדיגיטלי
+        // ==========================================
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = Icons.Default.WbSunny,
-                contentDescription = null,
-                tint = SunriseGold,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
+            val titleText = if (state.isTomorrowNetz) "ספירה לאחור לנץ מחר" else "הזמן שנותר לנץ החמה"
+
             Text(
                 text = titleText,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = TextWhite
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 21.sp
+                ),
+                color = TextWhite,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(3.dp))
+
+            Text(
+                text = "שעת הנץ: ${state.targetNetzTimeFormatted}",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp
+                ),
+                color = SunriseLightGold,
+                textAlign = TextAlign.Center
             )
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        // שעון הספירה (ממורכז)
+        DigitalCountdownClock(ticker = ticker)
 
-        Text(
-            text = "שעת הנץ המשוערת: $targetTimeString",
-            style = MaterialTheme.typography.bodyMedium,
-            color = SunriseLightGold.copy(alpha = 0.85f)
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Big Precision Digital Countdown Clock
-        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-            DigitalCountdownClock(
-                hours = state.hours,
-                minutes = state.minutes,
-                seconds = state.seconds,
-                centiseconds = state.centiseconds,
-                isUrgent = isUrgent,
-                isFinalTenSeconds = isFinalTen
-            )
-        }
-
-        // Passed notice if tomorrow's countdown is active
+        // הודעת נץ של היום עבר (אם רלוונטי)
         if (state.isTomorrowNetz && state.todayZmanim != null) {
             val todayNetzTime = if (state.isPlainNetz) state.todayZmanim.netzPlain else state.todayZmanim.netzVisible
             Surface(
-                color = DawnSurfaceVariant.copy(alpha = 0.7f),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                color = DawnSurfaceVariant.copy(alpha = 0.9f),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, DawnBorder),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "נץ החמה של היום חל בשעה ${todayNetzTime.format(shortTimeFormatter)}. הספירה כעת היא לנץ של מחר.",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "נץ החמה של היום חל בשעה ${todayNetzTime.format(shortTimeFormatter)}. הספירה כעת לנץ מחר.",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
                     color = TextMuted,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        // ==========================================
+        // 6. כפתורי פעולה ראשיים (גובה 60dp שווה בדיוק, טקסט תמציתי וממורכז ללא חיתוך!)
+        // ==========================================
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // כפתור 1: סדר תפילת ותיקין (טקסט ממוקד, לעולם לא נחתך)
+            Button(
+                onClick = onNavigateToGuide,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = SunriseGold,
+                    contentColor = DawnDeepNight
+                ),
+                shape = RoundedCornerShape(16.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .focusable()
+                    .testTag("open_vatikin_guide_btn")
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MenuBook,
+                        contentDescription = null,
+                        tint = DawnDeepNight,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "סדר תפילת ותיקין",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        ),
+                        color = DawnDeepNight,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1
+                    )
+                }
+            }
 
-        // Active Vatikin Step Guide Card
+            // כפתור 2: מצפן כיוון ירושלים (בדיוק אותו גובה 60dp וטקסט ממורכז מושלם)
+            Button(
+                onClick = onNavigateToCompass,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = DawnSurfaceCard,
+                    contentColor = SunriseSunGlow
+                ),
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, SunriseGold.copy(alpha = 0.8f)),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .focusable()
+                    .testTag("open_jerusalem_compass_btn")
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Explore,
+                        contentDescription = null,
+                        tint = SunriseSunGlow,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "מצפן כיוון ירושלים",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        ),
+                        color = SunriseSunGlow,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+
+        // ==========================================
+        // 7. שלב התפילה כעת (אם רלוונטי)
+        // ==========================================
         state.activeVatikinStep?.let { step ->
             Surface(
                 color = DawnSurfaceCard,
@@ -253,8 +461,8 @@ fun CountdownScreen(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
                     .clickable { onNavigateToGuide() }
+                    .focusable()
                     .testTag("active_vatikin_step_card")
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
@@ -265,18 +473,24 @@ fun CountdownScreen(
                     ) {
                         Text(
                             text = "שלב התפילה כעת (ותיקין)",
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
+                            ),
                             color = SunriseCoral
                         )
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = if (step.isCrucialMoment) SunriseRose.copy(alpha = 0.2f) else SunriseGold.copy(alpha = 0.15f)
+                            color = if (step.isCrucialMoment) SunriseRose.copy(alpha = 0.25f) else SunriseGold.copy(alpha = 0.2f)
                         ) {
                             Text(
                                 text = "${step.minutesBeforeNetz} דק' לפני הנץ",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                ),
                                 color = if (step.isCrucialMoment) SunriseRose else SunriseGold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                             )
                         }
                     }
@@ -285,7 +499,10 @@ fun CountdownScreen(
 
                     Text(
                         text = step.title,
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 17.sp
+                        ),
                         color = TextWhite
                     )
 
@@ -293,95 +510,74 @@ fun CountdownScreen(
 
                     Text(
                         text = step.description,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
                         color = TextMuted
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = step.halachicNote,
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                        color = SunriseLightGold.copy(alpha = 0.7f)
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Daily Morning Zmanim Quick Bar
+        // ==========================================
+        // 8. ארבעת זמני הבוקר (כרטיסים שווים בגובה 96dp, ממורכזים ללא חיתוך!)
+        // ==========================================
         state.todayZmanim?.let { z ->
-            Text(
-                text = "זמני הבוקר העיקריים להיום",
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                color = SunriseLightGold,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                textAlign = TextAlign.Start
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                ZmanQuickCard(
-                    title = "עלות השחר",
-                    time = z.alotHaShachar16Degrees.format(shortTimeFormatter),
-                    subtitle = "16.1°",
-                    modifier = Modifier.weight(1f)
+                Text(
+                    text = "זמני הבוקר העיקריים להיום",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp
+                    ),
+                    color = SunriseLightGold,
+                    textAlign = TextAlign.Start
                 )
 
-                ZmanQuickCard(
-                    title = "משיכיר",
-                    time = z.misheyakir.format(shortTimeFormatter),
-                    subtitle = "טלית ותפילין",
-                    modifier = Modifier.weight(1f)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ZmanQuickCard(
+                        title = "עלות השחר",
+                        time = z.alotHaShachar16Degrees.format(shortTimeFormatter),
+                        subtitle = "16.1°",
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(96.dp)
+                    )
 
-                ZmanQuickCard(
-                    title = if (state.isPlainNetz) "נץ מישורי" else "נץ נראה",
-                    time = (if (state.isPlainNetz) z.netzPlain else z.netzVisible).format(shortTimeFormatter),
-                    subtitle = "תפילת עמידה",
-                    isHighlight = true,
-                    modifier = Modifier.weight(1f)
-                )
+                    ZmanQuickCard(
+                        title = "משיכיר",
+                        time = z.misheyakir.format(shortTimeFormatter),
+                        subtitle = "תפילין",
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(96.dp)
+                    )
 
-                ZmanQuickCard(
-                    title = "סוף זמן שמע",
-                    time = z.sofZmanShemaGra.format(shortTimeFormatter),
-                    subtitle = "הגר״א",
-                    modifier = Modifier.weight(1f)
-                )
+                    ZmanQuickCard(
+                        title = if (state.isPlainNetz) "נץ מישורי" else "נץ נראה",
+                        time = (if (state.isPlainNetz) z.netzPlain else z.netzVisible).format(shortTimeFormatter),
+                        subtitle = "עמידה",
+                        isHighlight = true,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(96.dp)
+                    )
+
+                    ZmanQuickCard(
+                        title = "סוף ק״ש",
+                        time = z.sofZmanShemaGra.format(shortTimeFormatter),
+                        subtitle = "הגר״א",
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(96.dp)
+                    )
+                }
             }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Vatikin Prayer Guide CTA Banner
-        Button(
-            onClick = onNavigateToGuide,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = SunriseGold,
-                contentColor = DawnDeepNight
-            ),
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .height(50.dp)
-                .testTag("open_vatikin_guide_btn")
-        ) {
-            Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "צפה בסדר ולוח זמני תפילת ותיקין המלא",
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
-            )
         }
     }
 }
@@ -395,42 +591,51 @@ private fun ZmanQuickCard(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = if (isHighlight) SunriseGold.copy(alpha = 0.15f) else DawnSurfaceCard,
+        color = if (isHighlight) SunriseGold.copy(alpha = 0.22f) else DawnSurfaceCard,
         shape = RoundedCornerShape(14.dp),
         border = androidx.compose.foundation.BorderStroke(
-            1.dp,
+            1.5.dp,
             if (isHighlight) SunriseGold else DawnBorder
         ),
         modifier = modifier
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(vertical = 8.dp, horizontal = 2.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                ),
                 color = if (isHighlight) SunriseSunGlow else TextMuted,
                 textAlign = TextAlign.Center,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = time,
-                style = MaterialTheme.typography.titleMedium.copy(
+                style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
+                    fontSize = 18.5.sp
                 ),
                 color = if (isHighlight) SunriseSunGlow else TextWhite,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 1
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                color = if (isHighlight) SunriseCoral else TextMuted.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+                color = if (isHighlight) SunriseCoral else TextMuted.copy(alpha = 0.75f),
                 textAlign = TextAlign.Center,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

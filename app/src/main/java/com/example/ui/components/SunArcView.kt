@@ -1,12 +1,10 @@
 package com.example.ui.components
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -32,27 +30,6 @@ fun SunArcView(
     isNetzReached: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "sun_pulse")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.9f,
-        targetValue = 1.15f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse_scale"
-    )
-
-    val rayRotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(18000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "ray_rotation"
-    )
-
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -60,7 +37,7 @@ fun SunArcView(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(130.dp),
+                .height(110.dp),
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
@@ -73,8 +50,8 @@ fun SunArcView(
                     brush = Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            SunriseRose.copy(alpha = 0.12f),
-                            SunriseGold.copy(alpha = 0.22f)
+                            SunriseRose.copy(alpha = 0.08f),
+                            SunriseGold.copy(alpha = 0.18f)
                         ),
                         startY = 0f,
                         endY = horizonY
@@ -88,63 +65,54 @@ fun SunArcView(
                     brush = Brush.horizontalGradient(
                         listOf(
                             SunriseGold.copy(alpha = 0.1f),
-                            SunriseGold.copy(alpha = 0.9f),
+                            SunriseGold.copy(alpha = 0.8f),
                             SunriseLightGold,
-                            SunriseGold.copy(alpha = 0.9f),
+                            SunriseGold.copy(alpha = 0.8f),
                             SunriseGold.copy(alpha = 0.1f)
                         )
                     ),
                     start = Offset(16.dp.toPx(), horizonY),
                     end = Offset(width - 16.dp.toPx(), horizonY),
-                    strokeWidth = 2.5.dp.toPx()
+                    strokeWidth = 2.dp.toPx()
                 )
 
                 // Arc path for the sun
-                // Altitude ranges typically from -20° (night) to 0° (horizon/sunrise) to +15° (morning)
                 val clampedAlt = sunAltitudeDegrees.coerceIn(-18.0, 10.0)
-                // Map clampedAlt to normalized value [0.0 (night) to 1.0 (morning)]
                 val progress = ((clampedAlt + 18.0) / 28.0).toFloat().coerceIn(0f, 1f)
 
-                // Sun Arc
-                val arcRadiusX = width * 0.42f
-                val arcRadiusY = height * 0.58f
+                val arcRadiusX = width * 0.40f
                 val centerX = width * 0.5f
-                val arcCenterY = horizonY
 
-                // Sun position along arc: from angle PI (left) to 0 (right)
-                // Hebrew RTL or Eastward: Let's move the sun up towards the horizon
-                // At 0° altitude, sun should be exactly at horizonY
                 val sunX = centerX - arcRadiusX * cos(progress * PI.toFloat())
-                val sunY = arcCenterY - arcRadiusY * sin(progress * PI.toFloat()) * (if (clampedAlt < 0) -0.5f else 0.7f)
-                val finalSunY = (horizonY - (clampedAlt * 3.5).toFloat().coerceIn(-40f, 40f)).coerceIn(15.dp.toPx(), height - 15.dp.toPx())
+                val finalSunY = (horizonY - (clampedAlt * 3.2).toFloat().coerceIn(-35f, 35f)).coerceIn(14.dp.toPx(), height - 14.dp.toPx())
 
-                // Draw dashed guide trajectory
+                // Guide dashed arc
                 val guidePath = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(16.dp.toPx(), horizonY + 25.dp.toPx())
+                    moveTo(16.dp.toPx(), horizonY + 20.dp.toPx())
                     quadraticTo(
                         centerX,
-                        horizonY - arcRadiusY * 0.8f,
+                        horizonY - 45.dp.toPx(),
                         width - 16.dp.toPx(),
-                        horizonY + 25.dp.toPx()
+                        horizonY + 20.dp.toPx()
                     )
                 }
                 drawPath(
                     path = guidePath,
-                    color = SunriseGold.copy(alpha = 0.25f),
+                    color = SunriseGold.copy(alpha = 0.2f),
                     style = Stroke(
-                        width = 1.5.dp.toPx(),
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 12f), 0f)
+                        width = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 10f), 0f)
                     )
                 )
 
-                // Outer atmospheric radiant glow around sun
-                val sunGlowRadius = 38.dp.toPx() * (if (isNetzReached) pulseScale * 1.3f else pulseScale)
+                // Atmospheric radiant glow around sun
+                val sunGlowRadius = if (isNetzReached) 36.dp.toPx() else 28.dp.toPx()
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            SunriseSunGlow.copy(alpha = 0.75f),
-                            SunriseGold.copy(alpha = 0.4f),
-                            SunriseCoral.copy(alpha = 0.15f),
+                            SunriseSunGlow.copy(alpha = 0.65f),
+                            SunriseGold.copy(alpha = 0.35f),
+                            SunriseCoral.copy(alpha = 0.1f),
                             Color.Transparent
                         ),
                         center = Offset(sunX, finalSunY),
@@ -154,26 +122,26 @@ fun SunArcView(
                     center = Offset(sunX, finalSunY)
                 )
 
-                // Sun rays if close to or past netz
+                // Sun rays when sun is rising or above horizon
                 if (clampedAlt >= -4.0) {
-                    val rayCount = 12
+                    val rayCount = 8
                     for (i in 0 until rayCount) {
-                        val angle = (i * (360f / rayCount) + rayRotation) * (PI.toFloat() / 180f)
-                        val r1 = 14.dp.toPx()
-                        val r2 = 28.dp.toPx() * pulseScale
+                        val angle = (i * (360f / rayCount)) * (PI.toFloat() / 180f)
+                        val r1 = 12.dp.toPx()
+                        val r2 = 22.dp.toPx()
                         val startRay = Offset(sunX + r1 * cos(angle), finalSunY + r1 * sin(angle))
                         val endRay = Offset(sunX + r2 * cos(angle), finalSunY + r2 * sin(angle))
                         drawLine(
-                            color = SunriseSunGlow.copy(alpha = 0.6f),
+                            color = SunriseSunGlow.copy(alpha = 0.5f),
                             start = startRay,
                             end = endRay,
-                            strokeWidth = 2.dp.toPx()
+                            strokeWidth = 1.8.dp.toPx()
                         )
                     }
                 }
 
                 // Core Sun Orb
-                val coreRadius = 13.dp.toPx()
+                val coreRadius = 11.dp.toPx()
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(
@@ -181,7 +149,7 @@ fun SunArcView(
                             SunriseLightGold,
                             SunriseGold
                         ),
-                        center = Offset(sunX - 2.dp.toPx(), finalSunY - 2.dp.toPx()),
+                        center = Offset(sunX - 1.5.dp.toPx(), finalSunY - 1.5.dp.toPx()),
                         radius = coreRadius
                     ),
                     radius = coreRadius,
@@ -194,14 +162,14 @@ fun SunArcView(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "קו האופק (0.0°)",
                 style = MaterialTheme.typography.labelSmall,
-                color = SunriseLightGold.copy(alpha = 0.8f)
+                color = SunriseLightGold.copy(alpha = 0.75f)
             )
 
             Text(

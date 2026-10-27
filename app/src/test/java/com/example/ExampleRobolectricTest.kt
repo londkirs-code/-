@@ -54,4 +54,17 @@ class ExampleRobolectricTest {
         val formatted = hebrewDate.formatHebrew()
         assertTrue(formatted.isNotBlank())
     }
+
+    @Test
+    fun `compass manager initializes and provides state`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val manager = com.example.compass.CompassSensorManager(context)
+        val state = manager.compassState.value
+        assertNotNull(state)
+        // Tel Aviv to Jerusalem is East-South-East (~115-125 degrees)
+        manager.updateCoordinates(32.0853, 34.7818) // Tel Aviv
+        val updatedState = manager.compassState.value
+        assertTrue(updatedState.bearingToJerusalemDegrees in 100f..140f)
+        assertTrue(updatedState.distanceToJerusalemKm in 40..75)
+    }
 }

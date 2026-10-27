@@ -2,10 +2,13 @@
     <string name="app_name">נץ החמה</string>
     <string name="title_countdown">ספירה לאחור לנץ</string>
     <string name="subtitle_vatikin">תפילת ותיקין - כוותיקין</string>
-    <string name="tab_countdown">ספירה לאחור</string>
+
+    <string name="tab_countdown">ספירה לנץ</string>
     <string name="tab_zmanim">זמני היום</string>
-    <string name="tab_vatikin_guide">סדר תפילת ותיקין</string>
-    <string name="tab_settings">הגדרות ומיקום</string>
+    <string name="tab_vatikin_guide">סדר ותיקין</string>
+    <string name="tab_tefillin_mirror">מראת תפילין</string>
+    <string name="tab_compass">מצפן ירושלים</string>
+    <string name="tab_settings">הגדרות</string>
 
     <string name="netzhachama_plain">נץ מישורי (אסטרונומי)</string>
     <string name="netzhachama_visible">נץ נראה (טופוגרפי)</string>
@@ -48,4 +51,15 @@
     <string name="sound_alert">צליל/פעמון ברגע הנץ</string>
     <string name="ten_sec_beeps">צפצוף ב-10 שניות האחרונות</string>
     <string name="visible_netz_offset">היסט לנץ נראה (דקות)</string>
+
+    <string name="theme_day_night">מצב יום / לילה</string>
+    <string name="theme_light">מצב יום (בהיר)</string>
+    <string name="theme_dark">מצב לילה (כהה)</string>
+    <string name="theme_system">לפי הגדרת המכשיר</string>
+
+    <string name="tefillin_mirror_title">מראת תפילין מכוונת</string>
+    <string name="tefillin_mirror_subtitle">ודא שהתפילין מונחות בדיוק בין העיניים ומעל שורש השערות</string>
+    <string name="compass_title">מצפן תפילה לירושלים</string>
+    <string name="compass_subtitle">כיוון מדויק לבית המקדש והכותל המערבי</string>
+    <string name="keypad_help">תמיכה במקשים: * ו-# למעבר לשוניות, 1-6 קיצורי מסך</string>
 </resources>

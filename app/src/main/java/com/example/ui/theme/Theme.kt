@@ -10,6 +10,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.example.model.AppThemeMode
 
 private val DarkColorScheme = darkColorScheme(
     primary = SunriseGold,
@@ -44,21 +45,28 @@ private val LightColorScheme = lightColorScheme(
     onSurface = DayText,
     surfaceVariant = DaySurfaceVariant,
     onSurfaceVariant = DayTextMuted,
-    outline = Color(0xFFE2E8F0)
+    outline = Color(0xFFCBD5E1)
 )
 
 @Composable
 fun NetzHaChamaTheme(
-    darkTheme: Boolean = true, // Default to deep dawn dark theme for astronomical countdown immersion
-    dynamicColor: Boolean = false, // Keep branded golden dawn aesthetic
+    themeMode: AppThemeMode = AppThemeMode.DARK,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    val systemDark = isSystemInDarkTheme()
+    val isDark = when (themeMode) {
+        AppThemeMode.DARK -> true
+        AppThemeMode.LIGHT -> false
+        AppThemeMode.SYSTEM -> systemDark
+    }
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> DarkColorScheme
+        isDark -> DarkColorScheme
         else -> LightColorScheme
     }
 

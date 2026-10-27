@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.location.Location
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.audio.SoundVibrationHelper
@@ -11,6 +12,9 @@ import com.example.calculator.AstronomicalCalculator
 import com.example.calculator.DayZmanim
 import com.example.calendar.HebrewDate
 import com.example.calendar.HebrewDateHelper
+import com.example.compass.CompassSensorManager
+import com.example.compass.CompassState
+import com.example.model.AppThemeMode
 import com.example.model.LocationData
 import com.example.model.PredefinedLocations
 import com.example.model.VatikinGuideData
@@ -24,22 +28,29 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
+@Immutable
+data class TickerState(
+    val hours: Long = 0,
+    val minutes: Long = 0,
+    val seconds: Long = 0,
+    val centiseconds: Long = 0,
+    val remainingMillis: Long = 0,
+    val isUrgent: Boolean = false,
+    val isFinalTenSeconds: Boolean = false
+)
+
+@Immutable
 data class CountdownUiState(
     val selectedLocation: LocationData = PredefinedLocations.DEFAULT,
     val isPlainNetz: Boolean = false, // false = נץ נראה, true = נץ מישורי
-    val currentTime: ZonedDateTime = ZonedDateTime.now(ZoneId.of(PredefinedLocations.DEFAULT.timeZoneId)),
-    val targetNetz: ZonedDateTime = ZonedDateTime.now(),
+    val themeMode: AppThemeMode = AppThemeMode.DARK,
+    val targetNetz: ZonedDateTime? = null,
+    val targetNetzTimeFormatted: String = "--:--:--",
     val isTomorrowNetz: Boolean = false,
-    val remainingMillis: Long = 0L,
-    val hours: Long = 0L,
-    val minutes: Long = 0L,
-    val seconds: Long = 0L,
-    val centiseconds: Long = 0L, // tenths/hundredths for smooth precision
     val sunAltitudeDegrees: Double = 0.0,
     val todayZmanim: DayZmanim? = null,
     val tomorrowZmanim: DayZmanim? = null,
@@ -60,6 +71,12 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
     private val _uiState = MutableStateFlow(CountdownUiState())
     val uiState: StateFlow<CountdownUiState> = _uiState.asStateFlow()
 
+    private val _tickerState = MutableStateFlow(TickerState())
+    val tickerState: StateFlow<TickerState> = _tickerState.asStateFlow()
+
+    val compassManager = CompassSensorManager(application)
+    val compassState: StateFlow<CompassState> = compassManager.compassState
+
     private val soundHelper = SoundVibrationHelper(application)
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
 
@@ -67,8 +84,16 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
     private var lastTriggeredSecond: Long = -1L
     private var triggeredMilestones = mutableSetOf<String>()
 
+    // Cached target netz epoch millis for ultra-fast, allocation-free countdown ticks
+    @Volatile
+    private var targetNetzEpochMs: Long = 0L
+
+    @Volatile
+    private var lastSunAltitudeUpdateMs: Long = 0L
+
     init {
         recalculateZmanim()
+        compassManager.updateCoordinates(_uiState.value.selectedLocation.latitude, _uiState.value.selectedLocation.longitude)
         startTicker()
     }
 
@@ -76,64 +101,77 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
         tickerJob?.cancel()
         tickerJob = viewModelScope.launch {
             while (isActive) {
-                updateCountdown()
-                delay(40) // ~25 FPS smooth ticker
+                val nowMs = System.currentTimeMillis()
+                val remainingMs = (targetNetzEpochMs - nowMs).coerceAtLeast(0L)
+                val totalSec = remainingMs / 1000
+                val hrs = totalSec / 3600
+                val mins = (totalSec % 3600) / 60
+                val secs = totalSec % 60
+                val centis = (remainingMs % 1000) / 10
+
+                val isUrgent = remainingMs in 1..59_999
+                val isFinalTen = remainingMs in 1..10_999
+
+                _tickerState.value = TickerState(
+                    hours = hrs,
+                    minutes = mins,
+                    seconds = secs,
+                    centiseconds = centis,
+                    remainingMillis = remainingMs,
+                    isUrgent = isUrgent,
+                    isFinalTenSeconds = isFinalTen
+                )
+
+                // Handle audio & haptics efficiently
+                handleAlerts(remainingMs, totalSec)
+
+                // Update low-frequency items (Sun altitude & active prayer step) every 10 seconds or when remaining hits 0
+                if (nowMs - lastSunAltitudeUpdateMs > 10_000 || remainingMs == 0L) {
+                    lastSunAltitudeUpdateMs = nowMs
+                    updateLowFrequencyState(remainingMs)
+                }
+
+                // Adaptive delay: 100ms when under 1 minute for smooth tenth-seconds; 500ms when far away to save 80% battery/CPU
+                val delayTime = if (isUrgent) 100L else 500L
+                delay(delayTime)
             }
         }
     }
 
-    private fun updateCountdown() {
+    private fun updateLowFrequencyState(remainingMs: Long) {
         val state = _uiState.value
         val zoneId = ZoneId.of(state.selectedLocation.timeZoneId)
         val now = ZonedDateTime.now(zoneId)
 
-        val todayZ = state.todayZmanim ?: AstronomicalCalculator.calculateZmanim(now.toLocalDate(), state.selectedLocation)
-        val tomorrowZ = state.tomorrowZmanim ?: AstronomicalCalculator.calculateZmanim(now.toLocalDate().plusDays(1), state.selectedLocation)
+        // Sun altitude (computed only once every 10-15s instead of 25x/sec)
+        val sunAlt = AstronomicalCalculator.getSolarAltitude(
+            now,
+            state.selectedLocation.latitude,
+            state.selectedLocation.longitude
+        )
 
-        val todayNetz = if (state.isPlainNetz) todayZ.netzPlain else todayZ.netzVisible
-        val tomorrowNetz = if (state.isPlainNetz) tomorrowZ.netzPlain else tomorrowZ.netzVisible
-
-        val (targetNetz, isTomorrow) = if (now.isBefore(todayNetz)) {
-            todayNetz to false
-        } else {
-            tomorrowNetz to true
-        }
-
-        val remainingMs = Duration.between(now, targetNetz).toMillis().coerceAtLeast(0L)
-        val totalSec = remainingMs / 1000
-        val hrs = totalSec / 3600
-        val mins = (totalSec % 3600) / 60
-        val secs = totalSec % 60
-        val centis = (remainingMs % 1000) / 10
-
-        val sunAlt = AstronomicalCalculator.getSolarAltitude(now, state.selectedLocation.latitude, state.selectedLocation.longitude)
-
-        // Find active Vatikin step if within 80 minutes before target netz
         val minutesToNetz = (remainingMs / 60000).toInt()
-        val activeStep = if (!isTomorrow && minutesToNetz <= 80) {
+        val activeStep = if (!state.isTomorrowNetz && minutesToNetz in 0..80) {
             VatikinGuideData.STEPS.firstOrNull { minutesToNetz >= it.minutesBeforeNetz } ?: VatikinGuideData.STEPS.last()
         } else null
 
-        // Audio & Haptic alert handling
-        handleAlerts(state, remainingMs, totalSec)
+        // Check if today's netz just passed, re-anchor target if needed
+        val todayNetz = if (state.isPlainNetz) state.todayZmanim?.netzPlain else state.todayZmanim?.netzVisible
+        if (todayNetz != null && now.isAfter(todayNetz) && !state.isTomorrowNetz) {
+            recalculateZmanim()
+            return
+        }
 
         _uiState.update {
             it.copy(
-                currentTime = now,
-                targetNetz = targetNetz,
-                isTomorrowNetz = isTomorrow,
-                remainingMillis = remainingMs,
-                hours = hrs,
-                minutes = mins,
-                seconds = secs,
-                centiseconds = centis,
                 sunAltitudeDegrees = sunAlt,
                 activeVatikinStep = activeStep
             )
         }
     }
 
-    private fun handleAlerts(state: CountdownUiState, remainingMs: Long, totalSec: Long) {
+    private fun handleAlerts(remainingMs: Long, totalSec: Long) {
+        val state = _uiState.value
         if (!state.soundEnabled && !state.vibrationEnabled) return
 
         // 1. Ten second countdown beeps
@@ -165,35 +203,68 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
     fun recalculateZmanim() {
         val state = _uiState.value
         val zoneId = ZoneId.of(state.selectedLocation.timeZoneId)
-        val today = LocalDate.now(zoneId)
+        val now = ZonedDateTime.now(zoneId)
+        val today = now.toLocalDate()
         val tomorrow = today.plusDays(1)
 
         val todayZmanim = AstronomicalCalculator.calculateZmanim(today, state.selectedLocation)
         val tomorrowZmanim = AstronomicalCalculator.calculateZmanim(tomorrow, state.selectedLocation)
-        val currentHebrew = HebrewDateHelper.fromLocalDate(today)
 
+        val todayNetz = if (state.isPlainNetz) todayZmanim.netzPlain else todayZmanim.netzVisible
+        val tomorrowNetz = if (state.isPlainNetz) tomorrowZmanim.netzPlain else tomorrowZmanim.netzVisible
+
+        val (targetNetz, isTomorrow) = if (now.isBefore(todayNetz)) {
+            todayNetz to false
+        } else {
+            tomorrowNetz to true
+        }
+
+        targetNetzEpochMs = targetNetz.toInstant().toEpochMilli()
+
+        val timeFormatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")
+        val currentHebrew = HebrewDateHelper.fromLocalDate(today)
         val selectedZmanim = AstronomicalCalculator.calculateZmanim(state.selectedZmanimDate, state.selectedLocation)
         val selectedHebrew = HebrewDateHelper.fromLocalDate(state.selectedZmanimDate)
+
+        val sunAlt = AstronomicalCalculator.getSolarAltitude(now, state.selectedLocation.latitude, state.selectedLocation.longitude)
 
         _uiState.update {
             it.copy(
                 todayZmanim = todayZmanim,
                 tomorrowZmanim = tomorrowZmanim,
+                targetNetz = targetNetz,
+                targetNetzTimeFormatted = targetNetz.format(timeFormatter),
+                isTomorrowNetz = isTomorrow,
                 currentHebrewDate = currentHebrew,
                 selectedDayZmanim = selectedZmanim,
-                selectedDayHebrewDate = selectedHebrew
+                selectedDayHebrewDate = selectedHebrew,
+                sunAltitudeDegrees = sunAlt
             )
         }
     }
 
     fun selectLocation(location: LocationData) {
         _uiState.update { it.copy(selectedLocation = location, locationError = null) }
+        compassManager.updateCoordinates(location.latitude, location.longitude)
         recalculateZmanim()
     }
 
     fun setPlainNetz(isPlain: Boolean) {
         _uiState.update { it.copy(isPlainNetz = isPlain) }
         recalculateZmanim()
+    }
+
+    fun setThemeMode(mode: AppThemeMode) {
+        _uiState.update { it.copy(themeMode = mode) }
+    }
+
+    fun toggleThemeMode() {
+        val next = when (_uiState.value.themeMode) {
+            AppThemeMode.DARK -> AppThemeMode.LIGHT
+            AppThemeMode.LIGHT -> AppThemeMode.DARK
+            AppThemeMode.SYSTEM -> AppThemeMode.LIGHT
+        }
+        setThemeMode(next)
     }
 
     fun toggleSound() {
@@ -269,5 +340,6 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
         super.onCleared()
         tickerJob?.cancel()
         soundHelper.release()
+        compassManager.stopListening()
     }
 }

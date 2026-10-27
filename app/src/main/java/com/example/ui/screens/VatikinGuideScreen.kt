@@ -34,7 +34,7 @@ fun VatikinGuideScreen(
     val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm:ss") }
     val shortFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
 
-    val netzTime = state.targetNetz
+    val netzTime = state.targetNetz ?: java.time.ZonedDateTime.now()
 
     LazyColumn(
         modifier = modifier
@@ -102,7 +102,7 @@ fun VatikinGuideScreen(
         // Timeline items
         itemsIndexed(VatikinGuideData.STEPS) { index, step ->
             val stepTime = netzTime.minusMinutes(step.minutesBeforeNetz.toLong())
-            val isPassed = state.currentTime.isAfter(stepTime)
+            val isPassed = System.currentTimeMillis() >= stepTime.toInstant().toEpochMilli()
             val isCurrent = state.activeVatikinStep?.id == step.id
 
             Row(
@@ -219,38 +219,41 @@ fun VatikinGuideScreen(
                         ) {
                             Text(
                                 text = step.title,
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 17.5.sp
+                                ),
                                 color = if (step.isCrucialMoment) SunriseSunGlow else TextWhite
                             )
                             if (isCurrent) {
                                 Surface(
                                     color = SunriseGold,
-                                    shape = RoundedCornerShape(4.dp)
+                                    shape = RoundedCornerShape(6.dp)
                                 ) {
                                     Text(
                                         text = "עכשיו",
-                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                         color = DawnDeepNight,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                     )
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
                             text = step.description,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.5.sp),
                             color = TextMuted
                         )
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
                             text = step.halachicNote,
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                            color = SunriseLightGold.copy(alpha = 0.75f)
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
+                            color = SunriseLightGold.copy(alpha = 0.85f)
                         )
                     }
                 }
