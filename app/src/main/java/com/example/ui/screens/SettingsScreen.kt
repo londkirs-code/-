@@ -13,13 +13,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddLocation
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,9 +50,11 @@ fun SettingsScreen(
     onToggleSound: () -> Unit,
     onToggleVibration: () -> Unit,
     onToggleTenSecBeep: () -> Unit,
+    onSetUiScale: (Float) -> Unit = {},
     onSaveCustomLocation: (name: String, lat: Double, lon: Double, elevation: Double, offset: Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalAppColors.current
     val context = LocalContext.current
     var showCityDialog by remember { mutableStateOf(false) }
     var showCustomLocationDialog by remember { mutableStateOf(false) }
@@ -65,53 +70,167 @@ fun SettingsScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+            .padding(horizontal = 14.dp),
+        contentPadding = PaddingValues(vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        // Section: UI Scaling (הגדלה / הקטנה של אלמנטים, פונטים וכפתורים)
+        item {
+            Text(
+                text = "גודל תצוגה, פונטים וכפתורים",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.5.sp
+                ),
+                color = colors.gold
+            )
+        }
+
+        item {
+            Surface(
+                color = colors.surfaceCard,
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.2.dp, colors.border),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.FormatSize, contentDescription = null, tint = colors.gold, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "קנה מידה: ${(state.uiScale * 100).toInt()}%",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                ),
+                                color = colors.textPrimary
+                            )
+                        }
+
+                        // Plus / Minus Steppers (accessible 44dp size)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = { onSetUiScale(state.uiScale - 0.15f) },
+                                enabled = state.uiScale > 0.82f,
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(0.dp),
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .keypadFocusable(shape = RoundedCornerShape(12.dp))
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.Remove, contentDescription = "הקטן", modifier = Modifier.size(20.dp))
+                                }
+                            }
+
+                            OutlinedButton(
+                                onClick = { onSetUiScale(state.uiScale + 0.15f) },
+                                enabled = state.uiScale < 1.35f,
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(0.dp),
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .keypadFocusable(shape = RoundedCornerShape(12.dp))
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.Add, contentDescription = "הגדל", modifier = Modifier.size(20.dp))
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Preset buttons (height 42dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val presets = listOf(
+                            0.85f to "קומפקטי",
+                            1.00f to "רגיל",
+                            1.15f to "גדול",
+                            1.30f to "ענק"
+                        )
+                        presets.forEach { (scaleVal, label) ->
+                            val isSelected = kotlin.math.abs(state.uiScale - scaleVal) < 0.05f
+                            Button(
+                                onClick = { onSetUiScale(scaleVal) },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSelected) colors.gold else colors.surfaceVariant,
+                                    contentColor = if (isSelected) (if (colors.isDark) DawnDeepNight else androidx.compose.ui.graphics.Color.White) else colors.textPrimary
+                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(42.dp)
+                                    .keypadFocusable(shape = RoundedCornerShape(10.dp))
+                            ) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 12.5.sp
+                                    ),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Theme Mode Section (מצב יום / מצב לילה)
         item {
             Text(
                 text = "עיצוב: מצב יום / לילה",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = 19.sp
+                    fontSize = 17.5.sp
                 ),
-                color = SunriseLightGold
+                color = colors.gold
             )
         }
 
         item {
             Surface(
-                color = DawnSurfaceCard,
-                shape = RoundedCornerShape(22.dp),
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, DawnBorder),
+                color = colors.surfaceCard,
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.2.dp, colors.border),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     AppThemeMode.values().forEach { mode ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(10.dp))
                                 .clickable { onSetThemeMode(mode) }
-                                .focusable()
-                                .padding(vertical = 10.dp, horizontal = 6.dp),
+                                .keypadFocusable(shape = RoundedCornerShape(10.dp))
+                                .padding(vertical = 8.dp, horizontal = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
                                 selected = state.themeMode == mode,
                                 onClick = { onSetThemeMode(mode) },
-                                colors = RadioButtonDefaults.colors(selectedColor = SunriseGold)
+                                colors = RadioButtonDefaults.colors(selectedColor = colors.gold)
                             )
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = mode.titleHebrew,
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = if (state.themeMode == mode) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 17.sp
+                                    fontSize = 15.5.sp
                                 ),
-                                color = if (state.themeMode == mode) SunriseSunGlow else TextWhite
+                                color = if (state.themeMode == mode) colors.gold else colors.textPrimary
                             )
                         }
                     }
@@ -125,46 +244,46 @@ fun SettingsScreen(
                 text = "מיקום וקואורדינטות",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = 19.sp
+                    fontSize = 17.5.sp
                 ),
-                color = SunriseLightGold
+                color = colors.gold
             )
         }
 
         item {
             Surface(
-                color = DawnSurfaceCard,
-                shape = RoundedCornerShape(22.dp),
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, SunriseGold.copy(alpha = 0.3f)),
+                color = colors.surfaceCard,
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.2.dp, colors.border),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(18.dp)) {
+                Column(modifier = Modifier.padding(14.dp)) {
                     Text(
                         text = "מיקום פעיל:",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                        color = TextMuted
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                        color = colors.textSecondary
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = state.selectedLocation.nameHebrew,
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp
+                            fontSize = 20.sp
                         ),
-                        color = TextWhite
+                        color = colors.textPrimary
                     )
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
                         text = "קואורדינטות: ${String.format("%.4f", state.selectedLocation.latitude)}°N, ${String.format("%.4f", state.selectedLocation.longitude)}°E | גובה: ${state.selectedLocation.elevationMeters.toInt()} מ'",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
-                        color = SunriseLightGold.copy(alpha = 0.85f)
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                        color = colors.textGold
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    // שורת כפתורים 1: שתי פעולות מהירות בגובה 54dp שווה
+                    // שורת כפתורים 1: שתי פעולות בגובה 50dp מרווח ומיושר
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -172,15 +291,15 @@ fun SettingsScreen(
                         Button(
                             onClick = { showCityDialog = true },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = SunriseGold,
-                                contentColor = DawnDeepNight
+                                containerColor = colors.gold,
+                                contentColor = if (colors.isDark) DawnDeepNight else androidx.compose.ui.graphics.Color.White
                             ),
-                            shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(54.dp)
-                                .focusable()
+                                .height(50.dp)
+                                .keypadFocusable(shape = RoundedCornerShape(12.dp))
                                 .testTag("choose_city_btn")
                         ) {
                             Row(
@@ -190,7 +309,6 @@ fun SettingsScreen(
                                 Icon(
                                     imageVector = Icons.Default.LocationOn,
                                     contentDescription = null,
-                                    tint = DawnDeepNight,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
@@ -198,7 +316,7 @@ fun SettingsScreen(
                                     text = "בחר עיר",
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp
+                                        fontSize = 15.5.sp
                                     ),
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                     maxLines = 1
@@ -212,12 +330,12 @@ fun SettingsScreen(
                             },
                             modifier = Modifier
                                 .weight(1f)
-                                .height(54.dp)
-                                .focusable()
+                                .height(50.dp)
+                                .keypadFocusable(shape = RoundedCornerShape(12.dp))
                                 .testTag("gps_detect_btn"),
-                            shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.5.dp, SunriseGold.copy(alpha = 0.7f))
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.2.dp, colors.gold.copy(alpha = 0.8f))
                         ) {
                             Row(
                                 horizontalArrangement = Arrangement.Center,
@@ -226,7 +344,7 @@ fun SettingsScreen(
                                 Icon(
                                     imageVector = Icons.Default.MyLocation,
                                     contentDescription = null,
-                                    tint = SunriseGold,
+                                    tint = colors.gold,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
@@ -234,9 +352,9 @@ fun SettingsScreen(
                                     text = if (state.isLocating) "מאתר..." else "זיהוי GPS",
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp
+                                        fontSize = 15.5.sp
                                     ),
-                                    color = SunriseGold,
+                                    color = colors.gold,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                     maxLines = 1
                                 )
@@ -246,17 +364,17 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // שורת כפתורים 2: הגדרה ידנית ברוחב מלא ובגובה 54dp זהה
+                    // שורת כפתורים 2: הגדרה ידנית ברוחב מלא ובגובה 50dp
                     OutlinedButton(
                         onClick = { showCustomLocationDialog = true },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(54.dp)
-                            .focusable()
+                            .height(50.dp)
+                            .keypadFocusable(shape = RoundedCornerShape(12.dp))
                             .testTag("custom_location_btn"),
-                        shape = RoundedCornerShape(14.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, DawnBorder)
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.2.dp, colors.border)
                     ) {
                         Row(
                             horizontalArrangement = Arrangement.Center,
@@ -265,7 +383,7 @@ fun SettingsScreen(
                             Icon(
                                 imageVector = Icons.Default.AddLocation,
                                 contentDescription = null,
-                                tint = SunriseSunGlow,
+                                tint = colors.gold,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -273,9 +391,9 @@ fun SettingsScreen(
                                 text = "הגדרת מיקום מותאם אישית",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
+                                    fontSize = 15.5.sp
                                 ),
-                                color = TextWhite,
+                                color = colors.textPrimary,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                 maxLines = 1
                             )
@@ -283,11 +401,11 @@ fun SettingsScreen(
                     }
 
                     if (state.locationError != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = state.locationError,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = SunriseRose
+                            color = colors.rose
                         )
                     }
                 }
@@ -300,82 +418,84 @@ fun SettingsScreen(
                 text = "סוג חישוב נץ החמה",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = 19.sp
+                    fontSize = 17.5.sp
                 ),
-                color = SunriseLightGold
+                color = colors.gold
             )
         }
 
         item {
             Surface(
-                color = DawnSurfaceCard,
-                shape = RoundedCornerShape(22.dp),
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, DawnBorder),
+                color = colors.surfaceCard,
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.2.dp, colors.border),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
                             .clickable { onSetPlainNetz(false) }
-                            .focusable()
-                            .padding(vertical = 10.dp),
+                            .keypadFocusable(shape = RoundedCornerShape(10.dp))
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = !state.isPlainNetz,
                             onClick = { onSetPlainNetz(false) },
-                            colors = RadioButtonDefaults.colors(selectedColor = SunriseGold)
+                            colors = RadioButtonDefaults.colors(selectedColor = colors.gold)
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
                                 text = "נץ נראה (טופוגרפי) - מומלץ לוותיקין",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 17.sp
+                                    fontSize = 15.5.sp
                                 ),
-                                color = TextWhite
+                                color = colors.textPrimary
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "מחשב את הרגע בו גוף השמש עולה בפועל מעל קו ההרים המקומיים (כפי שנקבע בלוח ארץ ישראל).",
-                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                                color = TextMuted
+                                text = "הרגע בו גוף השמש עולה בפועל מעל קו ההרים המקומיים (לוח ארץ ישראל).",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                                color = colors.textSecondary
                             )
                         }
                     }
 
-                    HorizontalDivider(color = DawnBorder, modifier = Modifier.padding(vertical = 6.dp))
+                    HorizontalDivider(color = colors.border, modifier = Modifier.padding(vertical = 4.dp))
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
                             .clickable { onSetPlainNetz(true) }
-                            .focusable()
-                            .padding(vertical = 10.dp),
+                            .keypadFocusable(shape = RoundedCornerShape(10.dp))
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = state.isPlainNetz,
                             onClick = { onSetPlainNetz(true) },
-                            colors = RadioButtonDefaults.colors(selectedColor = SunriseGold)
+                            colors = RadioButtonDefaults.colors(selectedColor = colors.gold)
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
                                 text = "נץ מישורי (אסטרונומי)",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 17.sp
+                                    fontSize = 15.5.sp
                                 ),
-                                color = TextWhite
+                                color = colors.textPrimary
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "זריחה אסטרונומית ישרה בגובה פני הים ללא התחשבות במחסומי הרים מזרחיים.",
-                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                                color = TextMuted
+                                text = "זריחה אסטרונומית ישרה בגובה פני הים ללא מחסומי הרים.",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                                color = colors.textSecondary
                             )
                         }
                     }
@@ -383,34 +503,34 @@ fun SettingsScreen(
             }
         }
 
-        // Sound & Haptic Alerts Section
+        // Sound & Alerts Section
         item {
             Text(
                 text = "צלילים והתראות רטט",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = 19.sp
+                    fontSize = 17.5.sp
                 ),
-                color = SunriseLightGold
+                color = colors.gold
             )
         }
 
         item {
             Surface(
-                color = DawnSurfaceCard,
-                shape = RoundedCornerShape(22.dp),
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, DawnBorder),
+                color = colors.surfaceCard,
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.2.dp, colors.border),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(14.dp)) {
                     SettingToggleRow(
                         title = "הפעלת צלילי התראה",
-                        subtitle = "צלצול צפצוף ברגע הנץ ובנקודות ציון בתפילה",
+                        subtitle = "צלצול צפצוף ברגע הנץ ובנקודות ציון",
                         checked = state.soundEnabled,
                         onCheckedChange = { onToggleSound() }
                     )
 
-                    HorizontalDivider(color = DawnBorder, modifier = Modifier.padding(vertical = 10.dp))
+                    HorizontalDivider(color = colors.border, modifier = Modifier.padding(vertical = 8.dp))
 
                     SettingToggleRow(
                         title = "רטט (Haptics)",
@@ -419,11 +539,11 @@ fun SettingsScreen(
                         onCheckedChange = { onToggleVibration() }
                     )
 
-                    HorizontalDivider(color = DawnBorder, modifier = Modifier.padding(vertical = 10.dp))
+                    HorizontalDivider(color = colors.border, modifier = Modifier.padding(vertical = 8.dp))
 
                     SettingToggleRow(
                         title = "צפצוף בעשר השניות האחרונות",
-                        subtitle = "ספירה קולית (10..9..8..1) לתזמון סיום גאל ישראל",
+                        subtitle = "ספירה קולית לתזמון סיום גאל ישראל",
                         checked = state.tenSecBeepEnabled,
                         onCheckedChange = { onToggleTenSecBeep() }
                     )
@@ -431,40 +551,41 @@ fun SettingsScreen(
             }
         }
 
-        // Keypad Phone Support Guide
+        // Keypad Phone Guide (updated with reversed * and # actions and key 9 scale toggle)
         item {
             Surface(
-                color = DawnSurfaceVariant,
-                shape = RoundedCornerShape(18.dp),
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, SunriseGold.copy(alpha = 0.35f)),
+                color = colors.surfaceVariant,
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.2.dp, colors.gold.copy(alpha = 0.35f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Keyboard, contentDescription = null, tint = SunriseGold, modifier = Modifier.size(24.dp))
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Icon(Icons.Default.Keyboard, contentDescription = null, tint = colors.gold, modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "תמיכה במכשירי מקשים (כשרים):",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 17.sp
+                                fontSize = 16.sp
                             ),
-                            color = SunriseSunGlow
+                            color = colors.textPrimary
                         )
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "• כפתורים * ו-# למעבר מהיר בין הלשוניות\n" +
-                                "• ספרות 1 עד 5 למעבר ישיר למסכים\n" +
+                        text = "• כפתור * למעבר הבא, כפתור # למעבר קודם\n" +
+                                "• ספרות 1 עד 5 למעבר ישיר בין הלשוניות\n" +
                                 "• ספרה 7 להחלפת מצב יום / לילה\n" +
                                 "• ספרה 8 להחלפת נץ נראה / מישורי\n" +
+                                "• ספרה 9 לשינוי גודל תצוגה ופונטים\n" +
                                 "• ספרה 0 להשתקת צלילים\n" +
-                                "• חצי D-Pad ומקש Enter לבחירה וגלילה",
+                                "• חצי D-Pad ומקש Enter לבחירה עם מסגרת סימון ברורה",
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 14.5.sp,
-                            lineHeight = 22.sp
+                            fontSize = 13.5.sp,
+                            lineHeight = 20.sp
                         ),
-                        color = TextWhite
+                        color = colors.textSecondary
                     )
                 }
             }
@@ -472,18 +593,18 @@ fun SettingsScreen(
 
         item {
             Text(
-                text = "גרסה 1.2 • נץ החמה וזמני היום • תצוגה מוגדלת ומהירה",
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                color = TextMuted.copy(alpha = 0.7f),
+                text = "נץ החמה • תצוגה מותאמת אישית • גרסה 1.3",
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = colors.textSecondary.copy(alpha = 0.7f),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp),
+                    .padding(vertical = 8.dp),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         }
     }
 
-    // City Selection Dialog (Large Items)
+    // City Selection Dialog (Compact & Keypad-Friendly)
     if (showCityDialog) {
         AlertDialog(
             onDismissRequest = { showCityDialog = false },
@@ -492,29 +613,29 @@ fun SettingsScreen(
                     text = "בחר עיר או יישוב",
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 21.sp
+                        fontSize = 19.sp
                     ),
-                    color = SunriseSunGlow
+                    color = colors.textPrimary
                 )
             },
             text = {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(380.dp)
+                        .height(340.dp)
                 ) {
                     items(PredefinedLocations.CITIES) { city ->
                         val isSelected = state.selectedLocation.id == city.id
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(10.dp))
                                 .clickable {
                                     onSelectLocation(city)
                                     showCityDialog = false
                                 }
-                                .focusable()
-                                .padding(vertical = 12.dp, horizontal = 10.dp),
+                                .keypadFocusable(shape = RoundedCornerShape(10.dp))
+                                .padding(vertical = 10.dp, horizontal = 8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -523,22 +644,22 @@ fun SettingsScreen(
                                     text = city.nameHebrew,
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                                        fontSize = 18.sp
+                                        fontSize = 16.5.sp
                                     ),
-                                    color = if (isSelected) SunriseSunGlow else TextWhite
+                                    color = if (isSelected) colors.gold else colors.textPrimary
                                 )
                                 Text(
                                     text = "${city.nameEnglish} • ${city.elevationMeters.toInt()}m",
-                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                                    color = TextMuted
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+                                    color = colors.textSecondary
                                 )
                             }
                             if (isSelected) {
                                 Icon(
                                     Icons.Default.Check,
                                     contentDescription = null,
-                                    tint = SunriseGold,
-                                    modifier = Modifier.size(24.dp)
+                                    tint = colors.gold,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
@@ -548,28 +669,32 @@ fun SettingsScreen(
             confirmButton = {
                 Button(
                     onClick = { showCityDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = SunriseGold, contentColor = DawnDeepNight),
-                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.gold,
+                        contentColor = if (colors.isDark) DawnDeepNight else androidx.compose.ui.graphics.Color.White
+                    ),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
+                        .height(44.dp)
+                        .keypadFocusable(shape = RoundedCornerShape(10.dp))
                 ) {
                     Text(
                         "סגור",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 17.sp
+                            fontSize = 15.5.sp
                         ),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
             },
-            containerColor = DawnSurfaceCard,
-            shape = RoundedCornerShape(22.dp)
+            containerColor = colors.surfaceCard,
+            shape = RoundedCornerShape(18.dp)
         )
     }
 
-    // Custom Location Dialog (Large Inputs)
+    // Custom Location Dialog (Compact & Keypad-Friendly)
     if (showCustomLocationDialog) {
         var customName by remember { mutableStateOf("") }
         var customLat by remember { mutableStateOf(state.selectedLocation.latitude.toString()) }
@@ -584,55 +709,65 @@ fun SettingsScreen(
                     text = "הגדרת מיקום מותאם אישית",
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
+                        fontSize = 18.5.sp
                     ),
-                    color = SunriseSunGlow
+                    color = colors.textPrimary
                 )
             },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     OutlinedTextField(
                         value = customName,
                         onValueChange = { customName = it },
-                        label = { Text("שם המיקום (למשל: בית כנסת ותיקין)", fontSize = 15.sp) },
+                        label = { Text("שם המיקום", fontSize = 14.sp) },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .keypadFocusable(shape = RoundedCornerShape(8.dp))
                     )
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         OutlinedTextField(
                             value = customLat,
                             onValueChange = { customLat = it },
-                            label = { Text("קו רוחב (Lat)", fontSize = 14.sp) },
+                            label = { Text("קו רוחב (Lat)", fontSize = 13.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .keypadFocusable(shape = RoundedCornerShape(8.dp))
                         )
                         OutlinedTextField(
                             value = customLon,
                             onValueChange = { customLon = it },
-                            label = { Text("קו אורך (Lon)", fontSize = 14.sp) },
+                            label = { Text("קו אורך (Lon)", fontSize = 13.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .keypadFocusable(shape = RoundedCornerShape(8.dp))
                         )
                     }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         OutlinedTextField(
                             value = customElevation,
                             onValueChange = { customElevation = it },
-                            label = { Text("גובה במטרים", fontSize = 14.sp) },
+                            label = { Text("גובה (מ')", fontSize = 13.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .keypadFocusable(shape = RoundedCornerShape(8.dp))
                         )
                         OutlinedTextField(
                             value = customOffset,
                             onValueChange = { customOffset = it },
-                            label = { Text("היסט נץ (דק')", fontSize = 14.sp) },
+                            label = { Text("היסט (דק')", fontSize = 13.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .keypadFocusable(shape = RoundedCornerShape(8.dp))
                         )
                     }
                 }
@@ -647,15 +782,20 @@ fun SettingsScreen(
                         onSaveCustomLocation(customName, lat, lon, ele, off)
                         showCustomLocationDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = SunriseGold, contentColor = DawnDeepNight),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.height(52.dp)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.gold,
+                        contentColor = if (colors.isDark) DawnDeepNight else androidx.compose.ui.graphics.Color.White
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                        .height(44.dp)
+                        .keypadFocusable(shape = RoundedCornerShape(10.dp))
                 ) {
                     Text(
                         "שמור והפעל",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
+                            fontSize = 15.sp
                         ),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
@@ -664,22 +804,22 @@ fun SettingsScreen(
             dismissButton = {
                 OutlinedButton(
                     onClick = { showCustomLocationDialog = false },
-                    shape = RoundedCornerShape(14.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, DawnBorder),
-                    modifier = Modifier.height(52.dp)
+                    shape = RoundedCornerShape(10.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
+                    modifier = Modifier
+                        .height(44.dp)
+                        .keypadFocusable(shape = RoundedCornerShape(10.dp))
                 ) {
                     Text(
                         "ביטול",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontSize = 16.sp
-                        ),
-                        color = TextMuted,
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp),
+                        color = colors.textSecondary,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
             },
-            containerColor = DawnSurfaceCard,
-            shape = RoundedCornerShape(22.dp)
+            containerColor = colors.surfaceCard,
+            shape = RoundedCornerShape(18.dp)
         )
     }
 }
@@ -691,8 +831,15 @@ private fun SettingToggleRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val colors = LocalAppColors.current
+
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { onCheckedChange(!checked) }
+            .keypadFocusable(shape = RoundedCornerShape(8.dp))
+            .padding(vertical = 4.dp, horizontal = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -701,28 +848,28 @@ private fun SettingToggleRow(
                 text = title,
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp
+                    fontSize = 15.5.sp
                 ),
-                color = TextWhite
+                color = colors.textPrimary
             )
-            Spacer(modifier = Modifier.height(3.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
-                color = TextMuted
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                color = colors.textSecondary
             )
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(10.dp))
 
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = SunriseGold,
-                checkedTrackColor = SunriseGold.copy(alpha = 0.35f),
-                uncheckedThumbColor = TextMuted,
-                uncheckedTrackColor = DawnSurfaceVariant
+                checkedThumbColor = colors.gold,
+                checkedTrackColor = colors.gold.copy(alpha = 0.35f),
+                uncheckedThumbColor = colors.textSecondary,
+                uncheckedTrackColor = colors.surfaceVariant
             )
         )
     }

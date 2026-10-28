@@ -63,7 +63,8 @@ data class CountdownUiState(
     val locationError: String? = null,
     val selectedZmanimDate: LocalDate = LocalDate.now(),
     val selectedDayZmanim: DayZmanim? = null,
-    val selectedDayHebrewDate: HebrewDate? = null
+    val selectedDayHebrewDate: HebrewDate? = null,
+    val uiScale: Float = 1.0f // Scale factor for fonts, buttons, and elements (0.85f .. 1.35f)
 )
 
 class CountdownViewModel(application: Application) : AndroidViewModel(application) {
@@ -334,6 +335,19 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
         } catch (e: Exception) {
             _uiState.update { it.copy(isLocating = false, locationError = e.localizedMessage) }
         }
+    }
+
+    fun setUiScale(scale: Float) {
+        val clamped = scale.coerceIn(0.80f, 1.40f)
+        _uiState.update { it.copy(uiScale = clamped) }
+    }
+
+    fun changeUiScale(delta: Float) {
+        setUiScale(_uiState.value.uiScale + delta)
+    }
+
+    fun rotateCompassManually(degreesDelta: Float) {
+        compassManager.rotateHeadingManually(degreesDelta)
     }
 
     override fun onCleared() {

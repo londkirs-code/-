@@ -31,6 +31,7 @@ fun VatikinGuideScreen(
     state: CountdownUiState,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalAppColors.current
     val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm:ss") }
     val shortFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
 
@@ -46,10 +47,12 @@ fun VatikinGuideScreen(
         // Hero Header Card
         item {
             Surface(
-                color = DawnSurfaceCard,
-                shape = RoundedCornerShape(20.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, SunriseGold.copy(alpha = 0.35f)),
-                modifier = Modifier.fillMaxWidth()
+                color = colors.surface,
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.gold.copy(alpha = 0.35f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .keypadFocusable(shape = RoundedCornerShape(16.dp))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -60,10 +63,10 @@ fun VatikinGuideScreen(
                         Text(
                             text = "סדר תפילת כוותיקין",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = SunriseSunGlow
+                            color = colors.gold
                         )
                         Surface(
-                            color = SunriseGold.copy(alpha = 0.2f),
+                            color = colors.gold.copy(alpha = 0.15f),
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
@@ -72,7 +75,7 @@ fun VatikinGuideScreen(
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                                 ),
-                                color = SunriseLightGold,
+                                color = colors.gold,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
@@ -83,7 +86,7 @@ fun VatikinGuideScreen(
                     Text(
                         text = "לוח זמנים מחושב במדויק לדקה ולשנייה לפי נץ היעד ב${state.selectedLocation.nameHebrew}, כדי להגיע לסמיכת גאולה לתפילה ותחילת שמונה עשרה בדיוק ברגע הזריחה.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextMuted
+                        color = colors.textSecondary
                     )
                 }
             }
@@ -94,8 +97,8 @@ fun VatikinGuideScreen(
             Text(
                 text = "מהלך התפילה המתוזמן",
                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                color = SunriseLightGold,
-                modifier = Modifier.padding(top = 8.dp)
+                color = colors.gold,
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
 
@@ -122,15 +125,15 @@ fun VatikinGuideScreen(
                             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                         ),
                         color = when {
-                            isCurrent -> SunriseSunGlow
-                            isPassed -> TextMuted
-                            else -> TextGold
+                            isCurrent -> colors.gold
+                            isPassed -> colors.textSecondary.copy(alpha = 0.6f)
+                            else -> colors.gold
                         }
                     )
                     Text(
                         text = if (step.minutesBeforeNetz == 0) "רגע הנץ" else "-${step.minutesBeforeNetz} דק'",
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                        color = if (step.isCrucialMoment) SunriseRose else TextMuted
+                        color = if (step.isCrucialMoment) SunriseRose else colors.textSecondary
                     )
                 }
 
@@ -148,14 +151,14 @@ fun VatikinGuideScreen(
                             .background(
                                 when {
                                     step.isCrucialMoment -> SunriseRose
-                                    isCurrent -> SunriseGold
-                                    isPassed -> SunriseGold.copy(alpha = 0.3f)
-                                    else -> DawnBorder
+                                    isCurrent -> colors.gold
+                                    isPassed -> colors.gold.copy(alpha = 0.35f)
+                                    else -> colors.border
                                 }
                             )
                             .border(
                                 2.dp,
-                                if (isCurrent) SunriseSunGlow else Color.Transparent,
+                                if (isCurrent) colors.gold else Color.Transparent,
                                 CircleShape
                             ),
                         contentAlignment = Alignment.Center
@@ -164,7 +167,7 @@ fun VatikinGuideScreen(
                             Icon(
                                 Icons.Default.CheckCircle,
                                 contentDescription = null,
-                                tint = DawnDeepNight,
+                                tint = colors.surface,
                                 modifier = Modifier.size(12.dp)
                             )
                         } else if (step.isCrucialMoment) {
@@ -183,7 +186,7 @@ fun VatikinGuideScreen(
                                 .width(2.dp)
                                 .height(64.dp)
                                 .background(
-                                    if (isPassed) SunriseGold.copy(alpha = 0.4f) else DawnBorder
+                                    if (isPassed) colors.gold.copy(alpha = 0.35f) else colors.border
                                 )
                         )
                     }
@@ -195,21 +198,22 @@ fun VatikinGuideScreen(
                 Surface(
                     color = when {
                         step.isCrucialMoment -> SunriseRose.copy(alpha = 0.12f)
-                        isCurrent -> SunriseGold.copy(alpha = 0.15f)
-                        else -> DawnSurfaceCard
+                        isCurrent -> colors.gold.copy(alpha = 0.12f)
+                        else -> colors.surface
                     },
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = androidx.compose.foundation.BorderStroke(
                         1.dp,
                         when {
                             step.isCrucialMoment -> SunriseRose
-                            isCurrent -> SunriseGold
-                            else -> DawnBorder
+                            isCurrent -> colors.gold
+                            else -> colors.border
                         }
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 6.dp)
+                        .keypadFocusable(shape = RoundedCornerShape(12.dp))
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Row(
@@ -221,39 +225,39 @@ fun VatikinGuideScreen(
                                 text = step.title,
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 17.5.sp
+                                    fontSize = 17.sp
                                 ),
-                                color = if (step.isCrucialMoment) SunriseSunGlow else TextWhite
+                                color = if (step.isCrucialMoment) colors.gold else colors.textPrimary
                             )
                             if (isCurrent) {
                                 Surface(
-                                    color = SunriseGold,
+                                    color = colors.gold,
                                     shape = RoundedCornerShape(6.dp)
                                 ) {
                                     Text(
                                         text = "עכשיו",
                                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = DawnDeepNight,
+                                        color = if (colors.isDark) DawnDeepNight else Color.White,
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                     )
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
                             text = step.description,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.5.sp),
-                            color = TextMuted
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                            color = colors.textSecondary
                         )
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
                             text = step.halachicNote,
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                            color = SunriseLightGold.copy(alpha = 0.85f)
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+                            color = colors.gold.copy(alpha = 0.9f)
                         )
                     }
                 }
@@ -263,24 +267,25 @@ fun VatikinGuideScreen(
         // Halachic Sources Expander
         item {
             Surface(
-                color = DawnSurfaceVariant,
-                shape = RoundedCornerShape(16.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, DawnBorder),
+                color = colors.surface,
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 12.dp)
+                    .padding(top = 8.dp)
+                    .keypadFocusable(shape = RoundedCornerShape(14.dp))
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(14.dp)) {
                     Text(
                         text = "מקורות ההלכה והמעלה של תפילת ותיקין",
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                        color = SunriseLightGold
+                        color = colors.gold
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = VatikinGuideData.HALACHIC_SOURCES,
                         style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp),
-                        color = TextWhite
+                        color = colors.textPrimary
                     )
                 }
             }

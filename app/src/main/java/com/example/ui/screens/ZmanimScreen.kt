@@ -34,6 +34,7 @@ fun ZmanimScreen(
     onSelectDate: (LocalDate) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalAppColors.current
     val zmanim = state.selectedDayZmanim
     val hebrewDate = state.selectedDayHebrewDate
     val currentDate = state.selectedZmanimDate
@@ -44,20 +45,20 @@ fun ZmanimScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 14.dp),
+        contentPadding = PaddingValues(vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         // Date Navigation Header
         item {
             Surface(
-                color = DawnSurfaceCard,
-                shape = RoundedCornerShape(20.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, SunriseGold.copy(alpha = 0.25f)),
+                color = colors.surfaceCard,
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.2.dp, colors.border),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(14.dp),
+                    modifier = Modifier.padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Row(
@@ -68,16 +69,17 @@ fun ZmanimScreen(
                         IconButton(
                             onClick = { onSelectDate(currentDate.minusDays(1)) },
                             modifier = Modifier
-                                .size(48.dp)
+                                .size(42.dp)
                                 .clip(CircleShape)
-                                .background(DawnSurfaceVariant)
+                                .background(colors.surfaceVariant)
+                                .keypadFocusable(shape = CircleShape)
                                 .testTag("zmanim_prev_day_btn")
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = "יום קודם",
-                                tint = SunriseGold,
-                                modifier = Modifier.size(24.dp)
+                                tint = colors.gold,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
 
@@ -86,19 +88,19 @@ fun ZmanimScreen(
                                 text = currentDate.format(dateFormatter),
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp
+                                    fontSize = 17.sp
                                 ),
-                                color = TextWhite
+                                color = colors.textPrimary
                             )
 
                             hebrewDate?.let { hDate ->
                                 Text(
                                     text = hDate.formatHebrew(includeDayOfWeek = true, dayOfWeek = currentDate.dayOfWeek),
                                     style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontSize = 14.sp,
+                                        fontSize = 13.5.sp,
                                         fontWeight = FontWeight.SemiBold
                                     ),
-                                    color = TextGold
+                                    color = colors.textGold
                                 )
                             }
                         }
@@ -106,28 +108,31 @@ fun ZmanimScreen(
                         IconButton(
                             onClick = { onSelectDate(currentDate.plusDays(1)) },
                             modifier = Modifier
-                                .size(48.dp)
+                                .size(42.dp)
                                 .clip(CircleShape)
-                                .background(DawnSurfaceVariant)
+                                .background(colors.surfaceVariant)
+                                .keypadFocusable(shape = CircleShape)
                                 .testTag("zmanim_next_day_btn")
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "יום הבא",
-                                tint = SunriseGold,
-                                modifier = Modifier.size(24.dp)
+                                tint = colors.gold,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
 
                     if (currentDate != LocalDate.now()) {
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         OutlinedButton(
                             onClick = { onSelectDate(LocalDate.now()) },
-                            shape = RoundedCornerShape(14.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.5.dp, SunriseGold.copy(alpha = 0.7f)),
-                            modifier = Modifier.height(48.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
+                            shape = RoundedCornerShape(10.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.2.dp, colors.gold.copy(alpha = 0.7f)),
+                            modifier = Modifier
+                                .height(38.dp)
+                                .keypadFocusable(shape = RoundedCornerShape(10.dp)),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp)
                         ) {
                             Row(
                                 horizontalArrangement = Arrangement.Center,
@@ -136,18 +141,18 @@ fun ZmanimScreen(
                                 Icon(
                                     Icons.Default.Today,
                                     contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                    tint = SunriseGold
+                                    modifier = Modifier.size(16.dp),
+                                    tint = colors.gold
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = "חזור להיום",
                                     style = MaterialTheme.typography.titleSmall.copy(
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp
+                                        fontSize = 14.sp
                                     ),
-                                    color = SunriseGold,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    color = colors.gold,
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         }
@@ -160,9 +165,9 @@ fun ZmanimScreen(
         item {
             Text(
                 text = "זמני הבוקר ונץ החמה",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                color = SunriseLightGold,
-                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp),
+                color = colors.gold,
+                modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
             )
         }
 
@@ -213,9 +218,9 @@ fun ZmanimScreen(
             item {
                 Text(
                     text = "סוף זמן קריאת שמע ותפילה",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = SunriseLightGold,
-                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp),
+                    color = colors.gold,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
                 )
             }
 
@@ -255,9 +260,9 @@ fun ZmanimScreen(
             item {
                 Text(
                     text = "זמני המשך היום",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = SunriseLightGold,
-                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp),
+                    color = colors.gold,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
                 )
             }
 
@@ -309,33 +314,33 @@ fun ZmanimScreen(
                 val mgaSeconds = (zmanim.shaahZmanitMGAMs % 60000) / 1000
 
                 Surface(
-                    color = DawnSurfaceVariant,
-                    shape = RoundedCornerShape(16.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, DawnBorder),
+                    color = colors.surfaceVariant,
+                    shape = RoundedCornerShape(14.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp)
+                        .padding(top = 6.dp)
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
+                    Column(modifier = Modifier.padding(12.dp)) {
                         Text(
                             text = "אורך שעה זמנית ליום זה:",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = SunriseLightGold
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, fontSize = 13.sp),
+                            color = colors.gold
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "שעה זמנית הגר״א: ${graMinutes} דק' ו-${graSeconds} שנ'",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextWhite
+                                text = "הגר״א: ${graMinutes} דק' ו-${graSeconds} שנ'",
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+                                color = colors.textPrimary
                             )
                             Text(
                                 text = "מג״א: ${mgaMinutes} דק' ו-${mgaSeconds} שנ'",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextMuted
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+                                color = colors.textSecondary
                             )
                         }
                     }
@@ -353,27 +358,31 @@ private fun ZmanDetailCard(
     isPrimary: Boolean = false,
     isAccent: Boolean = false
 ) {
+    val colors = LocalAppColors.current
+
     Surface(
         color = when {
-            isPrimary -> SunriseGold.copy(alpha = 0.2f)
-            isAccent -> SunriseCoral.copy(alpha = 0.15f)
-            else -> DawnSurfaceCard
+            isPrimary -> colors.gold.copy(alpha = 0.16f)
+            isAccent -> colors.coral.copy(alpha = 0.12f)
+            else -> colors.surfaceCard
         },
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(14.dp),
         border = androidx.compose.foundation.BorderStroke(
-            1.5.dp,
+            1.2.dp,
             when {
-                isPrimary -> SunriseGold
-                isAccent -> SunriseCoral.copy(alpha = 0.6f)
-                else -> DawnBorder
+                isPrimary -> colors.gold
+                isAccent -> colors.coral.copy(alpha = 0.7f)
+                else -> colors.border
             }
         ),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .keypadFocusable(shape = RoundedCornerShape(14.dp))
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -382,33 +391,33 @@ private fun ZmanDetailCard(
                     text = title,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 17.5.sp
+                        fontSize = 16.sp
                     ),
-                    color = if (isPrimary) SunriseSunGlow else TextWhite
+                    color = if (isPrimary) colors.gold else colors.textPrimary
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = description,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
-                    color = TextMuted
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                    color = colors.textSecondary
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
             Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = if (isPrimary) SunriseGold else DawnSurfaceVariant
+                shape = RoundedCornerShape(10.dp),
+                color = if (isPrimary) colors.gold else colors.surfaceVariant
             ) {
                 Text(
                     text = time,
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 19.sp,
+                        fontSize = 17.5.sp,
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                     ),
-                    color = if (isPrimary) DawnDeepNight else TextGold,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    color = if (isPrimary) (if (colors.isDark) DawnDeepNight else androidx.compose.ui.graphics.Color.White) else colors.textGold,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                 )
             }
         }

@@ -23,23 +23,20 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.TickerState
-import com.example.ui.theme.DawnSurfaceCard
-import com.example.ui.theme.SunriseCoral
-import com.example.ui.theme.SunriseGold
-import com.example.ui.theme.SunriseLightGold
-import com.example.ui.theme.SunriseRose
-import com.example.ui.theme.SunriseSunGlow
+import com.example.ui.theme.LocalAppColors
 
 @Composable
 fun DigitalCountdownClock(
     ticker: TickerState,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalAppColors.current
+
     val borderColor by animateColorAsState(
         targetValue = when {
-            ticker.isFinalTenSeconds -> SunriseRose
-            ticker.isUrgent -> SunriseCoral
-            else -> SunriseGold.copy(alpha = 0.45f)
+            ticker.isFinalTenSeconds -> colors.rose
+            ticker.isUrgent -> colors.coral
+            else -> colors.gold.copy(alpha = 0.40f)
         },
         label = "border_color"
     )
@@ -48,25 +45,18 @@ fun DigitalCountdownClock(
         modifier = modifier
             .fillMaxWidth()
             .shadow(
-                elevation = if (ticker.isUrgent) 14.dp else 8.dp,
-                shape = RoundedCornerShape(26.dp),
-                spotColor = if (ticker.isFinalTenSeconds) SunriseRose else SunriseGold
+                elevation = if (ticker.isUrgent) 10.dp else 4.dp,
+                shape = RoundedCornerShape(22.dp),
+                spotColor = if (ticker.isFinalTenSeconds) colors.rose else colors.gold
             )
-            .clip(RoundedCornerShape(26.dp))
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        DawnSurfaceCard,
-                        DawnSurfaceCard.copy(alpha = 0.95f)
-                    )
-                )
-            )
+            .clip(RoundedCornerShape(22.dp))
+            .background(colors.surfaceCard)
             .border(
-                width = if (ticker.isUrgent) 2.5.dp else 1.5.dp,
+                width = if (ticker.isUrgent) 2.dp else 1.2.dp,
                 color = borderColor,
-                shape = RoundedCornerShape(26.dp)
+                shape = RoundedCornerShape(22.dp)
             )
-            .padding(vertical = 20.dp, horizontal = 6.dp),
+            .padding(vertical = 14.dp, horizontal = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -126,52 +116,55 @@ private fun TimeSegment(
     highlight: Boolean = false,
     isSmall: Boolean = false
 ) {
+    val colors = LocalAppColors.current
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(horizontal = if (isSmall) 2.dp else 3.dp)
     ) {
         Box(
             modifier = Modifier
-                .width(if (isSmall) 56.dp else 72.dp)
-                .height(if (isSmall) 60.dp else 74.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .width(if (isSmall) 52.dp else 66.dp)
+                .height(if (isSmall) 56.dp else 68.dp)
+                .clip(RoundedCornerShape(12.dp))
                 .background(
-                    if (highlight) SunriseRose.copy(alpha = 0.22f)
-                    else SunriseGold.copy(alpha = 0.1f)
+                    if (highlight) colors.rose.copy(alpha = 0.18f)
+                    else colors.surfaceVariant
                 )
                 .border(
-                    width = 1.2.dp,
-                    color = if (highlight) SunriseRose.copy(alpha = 0.6f) else SunriseGold.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(14.dp)
+                    width = 1.dp,
+                    color = if (highlight) colors.rose.copy(alpha = 0.6f) else colors.border,
+                    shape = RoundedCornerShape(12.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = value,
                 style = MaterialTheme.typography.headlineLarge.copy(
-                    fontSize = if (isSmall) 28.sp else 40.sp,
+                    fontSize = if (isSmall) 25.sp else 36.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
                     letterSpacing = 1.sp
                 ),
                 color = when {
-                    highlight -> SunriseSunGlow
-                    isSmall -> SunriseCoral
-                    else -> SunriseLightGold
+                    highlight -> colors.rose
+                    isSmall -> colors.coral
+                    colors.isDark -> colors.goldLight
+                    else -> colors.gold
                 },
                 textAlign = TextAlign.Center
             )
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 13.5.sp,
+                fontSize = 12.5.sp,
                 fontWeight = FontWeight.Bold
             ),
-            color = if (highlight) SunriseRose else SunriseLightGold.copy(alpha = 0.85f),
+            color = if (highlight) colors.rose else colors.textSecondary,
             textAlign = TextAlign.Center
         )
     }
@@ -179,30 +172,32 @@ private fun TimeSegment(
 
 @Composable
 private fun ColonSeparator(isUrgent: Boolean) {
+    val colors = LocalAppColors.current
     Text(
         text = ":",
         style = MaterialTheme.typography.headlineLarge.copy(
-            fontSize = 34.sp,
+            fontSize = 30.sp,
             fontWeight = FontWeight.Black
         ),
-        color = if (isUrgent) SunriseCoral else SunriseGold.copy(alpha = 0.6f),
+        color = if (isUrgent) colors.coral else colors.gold.copy(alpha = 0.6f),
         modifier = Modifier
             .padding(horizontal = 1.dp)
-            .offset(y = (-10).dp)
+            .offset(y = (-8).dp)
     )
 }
 
 @Composable
 private fun DotSeparator(isUrgent: Boolean) {
+    val colors = LocalAppColors.current
     Text(
         text = ".",
         style = MaterialTheme.typography.headlineLarge.copy(
-            fontSize = 34.sp,
+            fontSize = 30.sp,
             fontWeight = FontWeight.Black
         ),
-        color = if (isUrgent) SunriseRose else SunriseGold.copy(alpha = 0.6f),
+        color = if (isUrgent) colors.rose else colors.gold.copy(alpha = 0.6f),
         modifier = Modifier
             .padding(horizontal = 1.dp)
-            .offset(y = (-10).dp)
+            .offset(y = (-8).dp)
     )
 }

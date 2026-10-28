@@ -69,8 +69,20 @@ class MainActivity : ComponentActivity() {
             val compassState by viewModel.compassState.collectAsStateWithLifecycle()
 
             NetzHaChamaTheme(themeMode = state.themeMode) {
-                // Natural RTL layout for Hebrew UI
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                val colors = LocalAppColors.current
+                val currentDensity = androidx.compose.ui.platform.LocalDensity.current
+                val scaledDensity = remember(currentDensity.density, currentDensity.fontScale, state.uiScale) {
+                    androidx.compose.ui.unit.Density(
+                        density = currentDensity.density * state.uiScale,
+                        fontScale = currentDensity.fontScale * state.uiScale
+                    )
+                }
+
+                // Natural RTL layout for Hebrew UI with Global UI scaling
+                CompositionLocalProvider(
+                    androidx.compose.ui.platform.LocalDensity provides scaledDensity,
+                    LocalLayoutDirection provides LayoutDirection.Rtl
+                ) {
                     val context = LocalContext.current
                     val currentTabState = remember { mutableStateOf(AppTab.COUNTDOWN) }
                     activeTabState = currentTabState
@@ -83,52 +95,61 @@ class MainActivity : ComponentActivity() {
 
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
-                        containerColor = MaterialTheme.colorScheme.background,
+                        containerColor = colors.background,
                         contentWindowInsets = WindowInsets.safeDrawing,
                         bottomBar = {
-                            NavigationBar(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                contentColor = MaterialTheme.colorScheme.onSurface,
+                            Surface(
+                                color = colors.surface,
                                 tonalElevation = 8.dp,
-                                windowInsets = WindowInsets.navigationBars,
-                                modifier = Modifier
-                                    .height(76.dp)
-                                    .testTag("bottom_nav_bar")
+                                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
                             ) {
-                                AppTab.values().forEach { tab ->
-                                    val isSelected = currentTab == tab
-                                    NavigationBarItem(
-                                        selected = isSelected,
-                                        onClick = { currentTab = tab },
-                                        icon = {
-                                            Icon(
-                                                imageVector = if (isSelected) tab.selectedIcon else tab.unselectedIcon,
-                                                contentDescription = tab.title,
-                                                tint = if (isSelected) SunriseGold else TextMuted,
-                                                modifier = Modifier.size(26.dp)
-                                            )
-                                        },
-                                        label = {
-                                            Text(
-                                                text = tab.title,
-                                                style = MaterialTheme.typography.labelSmall.copy(
-                                                    fontSize = 12.5.sp,
-                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                                ),
-                                                color = if (isSelected) SunriseLightGold else TextMuted,
-                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                                maxLines = 1
-                                            )
-                                        },
-                                        colors = NavigationBarItemDefaults.colors(
-                                            indicatorColor = SunriseGold.copy(alpha = 0.22f),
-                                            selectedIconColor = SunriseGold,
-                                            selectedTextColor = SunriseLightGold,
-                                            unselectedIconColor = TextMuted,
-                                            unselectedTextColor = TextMuted
-                                        ),
-                                        modifier = Modifier.testTag(tab.tag)
-                                    )
+                                NavigationBar(
+                                    containerColor = colors.surface,
+                                    contentColor = colors.textPrimary,
+                                    tonalElevation = 0.dp,
+                                    windowInsets = NavigationBarDefaults.windowInsets,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("bottom_nav_bar")
+                                ) {
+                                    AppTab.values().forEach { tab ->
+                                        val isSelected = currentTab == tab
+                                        NavigationBarItem(
+                                            selected = isSelected,
+                                            onClick = { currentTab = tab },
+                                            icon = {
+                                                Icon(
+                                                    imageVector = if (isSelected) tab.selectedIcon else tab.unselectedIcon,
+                                                    contentDescription = tab.title,
+                                                    tint = if (isSelected) colors.gold else colors.textSecondary,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            },
+                                            label = {
+                                                Text(
+                                                    text = tab.title,
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        fontSize = 12.sp,
+                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                                    ),
+                                                    color = if (isSelected) colors.gold else colors.textSecondary,
+                                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                    maxLines = 1
+                                                )
+                                            },
+                                            colors = NavigationBarItemDefaults.colors(
+                                                indicatorColor = colors.gold.copy(alpha = 0.22f),
+                                                selectedIconColor = colors.gold,
+                                                selectedTextColor = colors.gold,
+                                                unselectedIconColor = colors.textSecondary,
+                                                unselectedTextColor = colors.textSecondary
+                                            ),
+                                            modifier = Modifier
+                                                .padding(horizontal = 2.dp)
+                                                .keypadFocusable(shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                                .testTag(tab.tag)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -167,7 +188,8 @@ class MainActivity : ComponentActivity() {
                                         state = state,
                                         compassState = compassState,
                                         onStartListening = { viewModel.compassManager.startListening() },
-                                        onStopListening = { viewModel.compassManager.stopListening() }
+                                        onStopListening = { viewModel.compassManager.stopListening() },
+                                        onRotateManual = { viewModel.rotateCompassManually(it) }
                                     )
                                 }
                                 AppTab.SETTINGS -> {
@@ -180,8 +202,9 @@ class MainActivity : ComponentActivity() {
                                         onToggleSound = { viewModel.toggleSound() },
                                         onToggleVibration = { viewModel.toggleVibration() },
                                         onToggleTenSecBeep = { viewModel.toggleTenSecBeep() },
+                                        onSetUiScale = { viewModel.setUiScale(it) },
                                         onSaveCustomLocation = { name, lat, lon, ele, off ->
-                                            viewModel.setCustomLocation(name, lat, lon, ele, off)
+                                             viewModel.setCustomLocation(name, lat, lon, ele, off)
                                         }
                                     )
                                 }
@@ -195,10 +218,12 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Physical Keypad & Kosher Phone navigation support:
-     * - '*' or '#' to cycle tabs
+     * - '*' advances forward to next tab
+     * - '#' moves backward to previous tab (actions reversed as requested)
      * - '1' to '5' for direct tab access
      * - '7' to toggle Day/Night theme
      * - '8' to toggle Netz type
+     * - '9' to cycle UI scaling (Compact, Normal, Large, Extra Large)
      * - '0' to toggle Sound
      */
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -209,13 +234,15 @@ class MainActivity : ComponentActivity() {
 
             when (keyCode) {
                 KeyEvent.KEYCODE_STAR -> {
-                    val prevIndex = (currentIndex - 1 + tabs.size) % tabs.size
-                    tabState.value = tabs[prevIndex]
+                    // Star (*) now advances FORWARD to next tab
+                    val nextIndex = (currentIndex + 1) % tabs.size
+                    tabState.value = tabs[nextIndex]
                     return true
                 }
                 KeyEvent.KEYCODE_POUND -> {
-                    val nextIndex = (currentIndex + 1) % tabs.size
-                    tabState.value = tabs[nextIndex]
+                    // Pound (#) now moves BACKWARD to previous tab
+                    val prevIndex = (currentIndex - 1 + tabs.size) % tabs.size
+                    tabState.value = tabs[prevIndex]
                     return true
                 }
                 KeyEvent.KEYCODE_1, KeyEvent.KEYCODE_NUMPAD_1 -> {
@@ -244,6 +271,17 @@ class MainActivity : ComponentActivity() {
                 }
                 KeyEvent.KEYCODE_8, KeyEvent.KEYCODE_NUMPAD_8 -> {
                     viewModel.setPlainNetz(!viewModel.uiState.value.isPlainNetz)
+                    return true
+                }
+                KeyEvent.KEYCODE_9, KeyEvent.KEYCODE_NUMPAD_9 -> {
+                    val currentScale = viewModel.uiState.value.uiScale
+                    val nextScale = when {
+                        currentScale < 0.95f -> 1.0f
+                        currentScale < 1.10f -> 1.15f
+                        currentScale < 1.25f -> 1.30f
+                        else -> 0.85f
+                    }
+                    viewModel.setUiScale(nextScale)
                     return true
                 }
                 KeyEvent.KEYCODE_0, KeyEvent.KEYCODE_NUMPAD_0 -> {
