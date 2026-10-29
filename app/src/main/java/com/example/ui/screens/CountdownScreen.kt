@@ -35,6 +35,7 @@ import com.example.ui.CountdownUiState
 import com.example.ui.TickerState
 import com.example.ui.components.DigitalCountdownClock
 import com.example.ui.components.SunArcView
+import com.example.ui.components.VatikinAlarmCard
 import com.example.ui.theme.*
 import java.time.format.DateTimeFormatter
 
@@ -48,6 +49,11 @@ fun CountdownScreen(
     onOpenCitySelector: () -> Unit,
     onNavigateToGuide: () -> Unit,
     onNavigateToCompass: () -> Unit,
+    onToggleAlarm: (Boolean) -> Unit = {},
+    onChangeAlarmMinutes: (Int) -> Unit = {},
+    onSetAlarmMinutes: (Int) -> Unit = {},
+    onTestAlarm: () -> Unit = {},
+    onSyncSystemClock: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
@@ -453,7 +459,19 @@ fun CountdownScreen(
         }
 
         // ==========================================
-        // 7. שלב התפילה כעת (אם רלוונטי)
+        // 7. שעון מעורר ותיקין דינמי (מתעדכן אוטומטית לפי הנץ)
+        // ==========================================
+        VatikinAlarmCard(
+            state = state,
+            onToggleAlarm = onToggleAlarm,
+            onChangeMinutes = onChangeAlarmMinutes,
+            onSetMinutes = onSetAlarmMinutes,
+            onTestAlarm = onTestAlarm,
+            onSyncSystemClock = onSyncSystemClock
+        )
+
+        // ==========================================
+        // 8. שלב התפילה כעת (אם רלוונטי)
         // ==========================================
         state.activeVatikinStep?.let { step ->
             Surface(

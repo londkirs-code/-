@@ -64,12 +64,32 @@ data class CountdownUiState(
     val selectedZmanimDate: LocalDate = LocalDate.now(),
     val selectedDayZmanim: DayZmanim? = null,
     val selectedDayHebrewDate: HebrewDate? = null,
-    val uiScale: Float = 1.0f // Scale factor for fonts, buttons, and elements (0.85f .. 1.35f)
+    val uiScale: Float = 1.0f, // Scale factor for fonts, buttons, and elements (0.85f .. 1.35f)
+    // Dynamic Vatikin Alarm fields
+    val alarmEnabled: Boolean = false,
+    val alarmMinutesBeforeNetz: Int = 45,
+    val alarmNextTriggerFormatted: String = "--:--",
+    val alarmNextTriggerEpochMillis: Long = 0L,
+    val alarmIsRinging: Boolean = false,
+    val alarmSoundEnabled: Boolean = true,
+    val alarmVibrationEnabled: Boolean = true,
+    val alarmSnoozeMinutes: Int = 5
 )
 
 class CountdownViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _uiState = MutableStateFlow(CountdownUiState())
+    private val alarmPrefs = com.example.alarm.VatikinAlarmPreferences(application)
+
+    private val _uiState = MutableStateFlow(
+        CountdownUiState(
+            alarmEnabled = alarmPrefs.isEnabled,
+            alarmMinutesBeforeNetz = alarmPrefs.minutesBeforeNetz,
+            alarmSoundEnabled = alarmPrefs.soundEnabled,
+            alarmVibrationEnabled = alarmPrefs.vibrationEnabled,
+            alarmSnoozeMinutes = alarmPrefs.snoozeMinutes,
+            alarmNextTriggerFormatted = alarmPrefs.nextAlarmFormatted
+        )
+    )
     val uiState: StateFlow<CountdownUiState> = _uiState.asStateFlow()
 
     private val _tickerState = MutableStateFlow(TickerState())
@@ -96,6 +116,13 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
         recalculateZmanim()
         compassManager.updateCoordinates(_uiState.value.selectedLocation.latitude, _uiState.value.selectedLocation.longitude)
         startTicker()
+
+        // Observe alarm ringing state from VatikinAlarmManager
+        viewModelScope.launch {
+            com.example.alarm.VatikinAlarmManager.isRingingState.collect { ringing ->
+                _uiState.update { it.copy(alarmIsRinging = ringing) }
+            }
+        }
     }
 
     private fun startTicker() {
@@ -229,6 +256,23 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
 
         val sunAlt = AstronomicalCalculator.getSolarAltitude(now, state.selectedLocation.latitude, state.selectedLocation.longitude)
 
+        val nextAlarmTime = com.example.alarm.VatikinAlarmManager.calculateNextAlarmDateTime(
+            state.selectedLocation,
+            state.alarmMinutesBeforeNetz,
+            state.isPlainNetz
+        )
+        val alarmFormatted = nextAlarmTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+        val alarmEpoch = nextAlarmTime.toInstant().toEpochMilli()
+
+        if (state.alarmEnabled) {
+            com.example.alarm.VatikinAlarmManager.scheduleVatikinAlarm(
+                getApplication(),
+                state.selectedLocation,
+                state.alarmMinutesBeforeNetz,
+                state.isPlainNetz
+            )
+        }
+
         _uiState.update {
             it.copy(
                 todayZmanim = todayZmanim,
@@ -239,7 +283,9 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
                 currentHebrewDate = currentHebrew,
                 selectedDayZmanim = selectedZmanim,
                 selectedDayHebrewDate = selectedHebrew,
-                sunAltitudeDegrees = sunAlt
+                sunAltitudeDegrees = sunAlt,
+                alarmNextTriggerFormatted = alarmFormatted,
+                alarmNextTriggerEpochMillis = alarmEpoch
             )
         }
     }
@@ -348,6 +394,124 @@ class CountdownViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun rotateCompassManually(degreesDelta: Float) {
         compassManager.rotateHeadingManually(degreesDelta)
+    }
+
+    fun setAlarmEnabled(enabled: Boolean) {
+        alarmPrefs.isEnabled = enabled
+        _uiState.update { it.copy(alarmEnabled = enabled) }
+        val context = getApplication<Application>()
+        if (enabled) {
+            val state = _uiState.value
+            val epoch = com.example.alarm.VatikinAlarmManager.scheduleVatikinAlarm(
+                context,
+                state.selectedLocation,
+                state.alarmMinutesBeforeNetz,
+                state.isPlainNetz
+            )
+            val nextAlarm = com.example.alarm.VatikinAlarmManager.calculateNextAlarmDateTime(
+                state.selectedLocation,
+                state.alarmMinutesBeforeNetz,
+                state.isPlainNetz
+            )
+            val formatted = nextAlarm.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+            _uiState.update {
+                it.copy(
+                    alarmNextTriggerEpochMillis = epoch,
+                    alarmNextTriggerFormatted = formatted
+                )
+            }
+        } else {
+            com.example.alarm.VatikinAlarmManager.cancelVatikinAlarm(context)
+            _uiState.update {
+                it.copy(
+                    alarmNextTriggerEpochMillis = 0L,
+                    alarmNextTriggerFormatted = "--:--"
+                )
+            }
+        }
+    }
+
+    fun setAlarmMinutesBeforeNetz(minutes: Int) {
+        val clamped = minutes.coerceIn(5, 180)
+        alarmPrefs.minutesBeforeNetz = clamped
+        _uiState.update { it.copy(alarmMinutesBeforeNetz = clamped) }
+
+        val state = _uiState.value
+        val nextAlarm = com.example.alarm.VatikinAlarmManager.calculateNextAlarmDateTime(
+            state.selectedLocation,
+            clamped,
+            state.isPlainNetz
+        )
+        val formatted = nextAlarm.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+        val epoch = nextAlarm.toInstant().toEpochMilli()
+
+        _uiState.update {
+            it.copy(
+                alarmNextTriggerEpochMillis = epoch,
+                alarmNextTriggerFormatted = formatted
+            )
+        }
+
+        if (state.alarmEnabled) {
+            com.example.alarm.VatikinAlarmManager.scheduleVatikinAlarm(
+                getApplication(),
+                state.selectedLocation,
+                clamped,
+                state.isPlainNetz
+            )
+        }
+    }
+
+    fun changeAlarmMinutesBeforeNetz(delta: Int) {
+        setAlarmMinutesBeforeNetz(_uiState.value.alarmMinutesBeforeNetz + delta)
+    }
+
+    fun setAlarmSoundEnabled(enabled: Boolean) {
+        alarmPrefs.soundEnabled = enabled
+        _uiState.update { it.copy(alarmSoundEnabled = enabled) }
+    }
+
+    fun setAlarmVibrationEnabled(enabled: Boolean) {
+        alarmPrefs.vibrationEnabled = enabled
+        _uiState.update { it.copy(alarmVibrationEnabled = enabled) }
+    }
+
+    fun setAlarmSnoozeMinutes(minutes: Int) {
+        val clamped = minutes.coerceIn(1, 30)
+        alarmPrefs.snoozeMinutes = clamped
+        _uiState.update { it.copy(alarmSnoozeMinutes = clamped) }
+    }
+
+    fun dismissAlarm() {
+        val state = _uiState.value
+        com.example.alarm.VatikinAlarmManager.dismissAlarm(getApplication(), state.selectedLocation)
+        _uiState.update { it.copy(alarmIsRinging = false) }
+    }
+
+    fun snoozeAlarm() {
+        val state = _uiState.value
+        com.example.alarm.VatikinAlarmManager.snoozeAlarm(getApplication(), state.alarmSnoozeMinutes)
+        _uiState.update { it.copy(alarmIsRinging = false) }
+    }
+
+    fun testAlarmNow() {
+        val state = _uiState.value
+        com.example.alarm.VatikinAlarmRinger.startRinging(
+            getApplication(),
+            state.alarmSoundEnabled,
+            state.alarmVibrationEnabled
+        )
+        com.example.alarm.VatikinAlarmManager.setRinging(true)
+    }
+
+    fun syncWithSystemClock(context: Context): Boolean {
+        val state = _uiState.value
+        return com.example.alarm.VatikinAlarmManager.syncWithSystemClock(
+            context,
+            state.selectedLocation,
+            state.alarmMinutesBeforeNetz,
+            state.isPlainNetz
+        )
     }
 
     override fun onCleared() {

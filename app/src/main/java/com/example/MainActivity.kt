@@ -63,6 +63,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        if (intent.getBooleanExtra("EXTRA_ALARM_RINGING", false)) {
+            viewModel.testAlarmNow()
+        }
+
         setContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             val ticker by viewModel.tickerState.collectAsStateWithLifecycle()
@@ -169,7 +173,12 @@ class MainActivity : ComponentActivity() {
                                         onToggleTheme = { viewModel.toggleThemeMode() },
                                         onOpenCitySelector = { currentTab = AppTab.SETTINGS },
                                         onNavigateToGuide = { currentTab = AppTab.GUIDE },
-                                        onNavigateToCompass = { currentTab = AppTab.COMPASS }
+                                        onNavigateToCompass = { currentTab = AppTab.COMPASS },
+                                        onToggleAlarm = { viewModel.setAlarmEnabled(it) },
+                                        onChangeAlarmMinutes = { viewModel.changeAlarmMinutesBeforeNetz(it) },
+                                        onSetAlarmMinutes = { viewModel.setAlarmMinutesBeforeNetz(it) },
+                                        onTestAlarm = { viewModel.testAlarmNow() },
+                                        onSyncSystemClock = { viewModel.syncWithSystemClock(context) }
                                     )
                                 }
                                 AppTab.ZMANIM -> {
@@ -205,14 +214,39 @@ class MainActivity : ComponentActivity() {
                                         onSetUiScale = { viewModel.setUiScale(it) },
                                         onSaveCustomLocation = { name, lat, lon, ele, off ->
                                              viewModel.setCustomLocation(name, lat, lon, ele, off)
-                                        }
+                                        },
+                                        onToggleAlarm = { viewModel.setAlarmEnabled(it) },
+                                        onChangeAlarmMinutes = { viewModel.changeAlarmMinutesBeforeNetz(it) },
+                                        onSetAlarmMinutes = { viewModel.setAlarmMinutesBeforeNetz(it) },
+                                        onToggleAlarmSound = { viewModel.setAlarmSoundEnabled(it) },
+                                        onToggleAlarmVibration = { viewModel.setAlarmVibrationEnabled(it) },
+                                        onSetAlarmSnoozeMinutes = { viewModel.setAlarmSnoozeMinutes(it) },
+                                        onTestAlarm = { viewModel.testAlarmNow() },
+                                        onSyncSystemClock = { viewModel.syncWithSystemClock(context) }
                                     )
                                 }
+                            }
+
+                            // Dynamic Vatikin Alarm Ringing Full-Screen Modal
+                            if (state.alarmIsRinging) {
+                                com.example.ui.components.VatikinAlarmRingingDialog(
+                                    state = state,
+                                    onDismiss = { viewModel.dismissAlarm() },
+                                    onSnooze = { viewModel.snoozeAlarm() }
+                                )
                             }
                         }
                     }
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.getBooleanExtra("EXTRA_ALARM_RINGING", false)) {
+            viewModel.testAlarmNow()
         }
     }
 
@@ -224,9 +258,25 @@ class MainActivity : ComponentActivity() {
      * - '7' to toggle Day/Night theme
      * - '8' to toggle Netz type
      * - '9' to cycle UI scaling (Compact, Normal, Large, Extra Large)
-     * - '0' to toggle Sound
+     * - '0' to toggle Sound (or dismiss alarm if ringing)
      */
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        // If alarm is currently ringing, physical buttons dismiss or snooze it
+        if (viewModel.uiState.value.alarmIsRinging) {
+            when (keyCode) {
+                KeyEvent.KEYCODE_0, KeyEvent.KEYCODE_NUMPAD_0,
+                KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_SPACE -> {
+                    viewModel.dismissAlarm()
+                    return true
+                }
+                KeyEvent.KEYCODE_STAR, KeyEvent.KEYCODE_POUND -> {
+                    viewModel.snoozeAlarm()
+                    return true
+                }
+            }
+        }
+
         val tabState = activeTabState
         if (tabState != null) {
             val tabs = AppTab.values()

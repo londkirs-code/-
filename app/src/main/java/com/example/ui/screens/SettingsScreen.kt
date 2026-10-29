@@ -34,9 +34,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 import com.example.model.AppThemeMode
 import com.example.model.LocationData
 import com.example.model.PredefinedLocations
+import com.example.ui.components.VatikinAlarmCard
 import com.example.ui.CountdownUiState
 import com.example.ui.theme.*
 
@@ -52,6 +54,14 @@ fun SettingsScreen(
     onToggleTenSecBeep: () -> Unit,
     onSetUiScale: (Float) -> Unit = {},
     onSaveCustomLocation: (name: String, lat: Double, lon: Double, elevation: Double, offset: Int) -> Unit,
+    onToggleAlarm: (Boolean) -> Unit = {},
+    onChangeAlarmMinutes: (Int) -> Unit = {},
+    onSetAlarmMinutes: (Int) -> Unit = {},
+    onToggleAlarmSound: (Boolean) -> Unit = {},
+    onToggleAlarmVibration: (Boolean) -> Unit = {},
+    onSetAlarmSnoozeMinutes: (Int) -> Unit = {},
+    onTestAlarm: () -> Unit = {},
+    onSyncSystemClock: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = LocalAppColors.current
@@ -497,6 +507,107 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
                                 color = colors.textSecondary
                             )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Vatikin Alarm Clock Section
+        item {
+            Text(
+                text = "שעון מעורר ותיקין דינמי",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.5.sp
+                ),
+                color = colors.gold
+            )
+        }
+
+        item {
+            VatikinAlarmCard(
+                state = state,
+                onToggleAlarm = onToggleAlarm,
+                onChangeMinutes = onChangeAlarmMinutes,
+                onSetMinutes = onSetAlarmMinutes,
+                onTestAlarm = onTestAlarm,
+                onSyncSystemClock = onSyncSystemClock
+            )
+        }
+
+        item {
+            Surface(
+                color = colors.surfaceCard,
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.2.dp, colors.border),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    SettingToggleRow(
+                        title = "צליל בשעון מעורר",
+                        subtitle = "הפעלת צלצול התרעה חזק",
+                        checked = state.alarmSoundEnabled,
+                        onCheckedChange = { onToggleAlarmSound(!state.alarmSoundEnabled) }
+                    )
+
+                    HorizontalDivider(color = colors.border, modifier = Modifier.padding(vertical = 8.dp))
+
+                    SettingToggleRow(
+                        title = "רטט בשעון מעורר",
+                        subtitle = "הפעלת רטט חוזר בעת צלצול",
+                        checked = state.alarmVibrationEnabled,
+                        onCheckedChange = { onToggleAlarmVibration(!state.alarmVibrationEnabled) }
+                    )
+
+                    HorizontalDivider(color = colors.border, modifier = Modifier.padding(vertical = 8.dp))
+
+                    // Snooze duration
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "משך נודניק (Snooze)",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.5.sp
+                                ),
+                                color = colors.textPrimary
+                            )
+                            Text(
+                                text = "זמן המתנה עד לצלצול הבא",
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+                                color = colors.textSecondary
+                            )
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(5, 10, 15).forEach { mins ->
+                                val isSelected = state.alarmSnoozeMinutes == mins
+                                Button(
+                                    onClick = { onSetAlarmSnoozeMinutes(mins) },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (isSelected) colors.gold else colors.surfaceVariant,
+                                        contentColor = if (isSelected) (if (colors.isDark) Color(0xFF0F172A) else Color.White) else colors.textPrimary
+                                    ),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                    modifier = Modifier
+                                        .height(36.dp)
+                                        .keypadFocusable(shape = RoundedCornerShape(8.dp))
+                                ) {
+                                    Text(
+                                        text = "$mins דק'",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            fontSize = 12.sp
+                                        )
+                                    )
+                                }
+                            }
                         }
                     }
                 }
